@@ -11,8 +11,9 @@ class DevAliasApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'DevAlias',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF635BFF)),
         useMaterial3: true,
       ),
       home: const DevAliasHomePage(),
@@ -26,20 +27,25 @@ class DevAliasHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.alternate_email_rounded,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 16),
-            Text('DevAlias', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            const Text('Створюйте зрозумілі імена для складного коду.'),
-          ],
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.code_rounded,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'DevAlias',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 8),
+              const Text('IT-гра для команд і справжніх девелоперів'),
+            ],
+          ),
         ),
       ),
     );
