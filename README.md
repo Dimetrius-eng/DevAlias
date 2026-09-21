@@ -1,4 +1,4 @@
-# devalias
+# Devalias
 
 A team-based IT terminology party game.
 
