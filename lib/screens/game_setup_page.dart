@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/asset_word_repository.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_settings.dart';
 import '../domain/team.dart';
@@ -13,6 +14,7 @@ class GameSetupPage extends StatefulWidget {
 }
 
 class _GameSetupPageState extends State<GameSetupPage> {
+  final _wordRepository = const AssetWordRepository();
   String _firstTeamName = 'Команда 1';
   String _secondTeamName = 'Команда 2';
   int _roundDurationSeconds = 60;
@@ -31,8 +33,14 @@ class _GameSetupPageState extends State<GameSetupPage> {
     );
   }
 
-  void _showSettingsSummary() {
+  Future<void> _showSettingsSummary() async {
     final settings = _gameSettings;
+    final words = await _wordRepository.loadForSettings(settings);
+
+    if (!mounted) {
+      return;
+    }
+
     final categories = settings.categories
         .map((category) => category.label)
         .join(', ');
@@ -42,7 +50,8 @@ class _GameSetupPageState extends State<GameSetupPage> {
         content: Text(
           'Партія готова: ${settings.firstTeam.name} проти '
           '${settings.secondTeam.name}, ${settings.roundCount} раунди по '
-          '${settings.roundDuration.inSeconds} с. Категорії: $categories.',
+          '${settings.roundDuration.inSeconds} с. У колоді: ${words.length} '
+          'слів. Категорії: $categories.',
         ),
       ),
     );
