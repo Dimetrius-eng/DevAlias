@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-const _availableCategories = [
-  'Загальні IT',
-  'Мови програмування',
-  'Веброзробка',
-  'Бази даних',
-];
+import '../domain/difficulty.dart';
+import '../domain/game_settings.dart';
+import '../domain/team.dart';
+import '../domain/word_category.dart';
 
 class GameSetupPage extends StatefulWidget {
   const GameSetupPage({super.key});
@@ -17,18 +15,34 @@ class GameSetupPage extends StatefulWidget {
 class _GameSetupPageState extends State<GameSetupPage> {
   String _firstTeamName = 'Команда 1';
   String _secondTeamName = 'Команда 2';
-  int _roundDuration = 60;
+  int _roundDurationSeconds = 60;
   int _roundCount = 3;
-  String _difficulty = 'Середній';
-  final Set<String> _selectedCategories = {'Загальні IT'};
+  Difficulty _difficulty = Difficulty.medium;
+  final Set<WordCategory> _selectedCategories = {WordCategory.generalIt};
+
+  GameSettings get _gameSettings {
+    return GameSettings(
+      firstTeam: Team(name: _firstTeamName),
+      secondTeam: Team(name: _secondTeamName),
+      roundDuration: Duration(seconds: _roundDurationSeconds),
+      roundCount: _roundCount,
+      difficulty: _difficulty,
+      categories: _selectedCategories,
+    );
+  }
 
   void _showSettingsSummary() {
-    final categories = _selectedCategories.join(', ');
+    final settings = _gameSettings;
+    final categories = settings.categories
+        .map((category) => category.label)
+        .join(', ');
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Партія готова: $_firstTeamName проти $_secondTeamName, '
-          '$_roundCount раунди по $_roundDuration с. Категорії: $categories.',
+          'Партія готова: ${settings.firstTeam.name} проти '
+          '${settings.secondTeam.name}, ${settings.roundCount} раунди по '
+          '${settings.roundDuration.inSeconds} с. Категорії: $categories.',
         ),
       ),
     );
@@ -36,6 +50,8 @@ class _GameSetupPageState extends State<GameSetupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = _gameSettings;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Нова гра')),
       body: SafeArea(
@@ -55,7 +71,9 @@ class _GameSetupPageState extends State<GameSetupPage> {
                 labelText: 'Назва першої команди',
               ),
               textInputAction: TextInputAction.next,
-              onChanged: (value) => _firstTeamName = value.trim(),
+              onChanged: (value) {
+                setState(() => _firstTeamName = value.trim());
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -63,7 +81,9 @@ class _GameSetupPageState extends State<GameSetupPage> {
               decoration: const InputDecoration(
                 labelText: 'Назва другої команди',
               ),
-              onChanged: (value) => _secondTeamName = value.trim(),
+              onChanged: (value) {
+                setState(() => _secondTeamName = value.trim());
+              },
             ),
             const SizedBox(height: 32),
             Text(
@@ -77,9 +97,9 @@ class _GameSetupPageState extends State<GameSetupPage> {
                 ButtonSegment(value: 60, label: Text('60 с')),
                 ButtonSegment(value: 90, label: Text('90 с')),
               ],
-              selected: {_roundDuration},
+              selected: {_roundDurationSeconds},
               onSelectionChanged: (selection) {
-                setState(() => _roundDuration = selection.first);
+                setState(() => _roundDurationSeconds = selection.first);
               },
             ),
             const SizedBox(height: 32),
@@ -102,11 +122,11 @@ class _GameSetupPageState extends State<GameSetupPage> {
             const SizedBox(height: 32),
             Text('Складність', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            SegmentedButton<String>(
+            SegmentedButton<Difficulty>(
               segments: const [
-                ButtonSegment(value: 'Легка', label: Text('Легка')),
-                ButtonSegment(value: 'Середній', label: Text('Середня')),
-                ButtonSegment(value: 'Важка', label: Text('Важка')),
+                ButtonSegment(value: Difficulty.easy, label: Text('Легка')),
+                ButtonSegment(value: Difficulty.medium, label: Text('Середня')),
+                ButtonSegment(value: Difficulty.hard, label: Text('Важка')),
               ],
               selected: {_difficulty},
               onSelectionChanged: (selection) {
@@ -119,9 +139,9 @@ class _GameSetupPageState extends State<GameSetupPage> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _availableCategories.map((category) {
+              children: WordCategory.values.map((category) {
                 return FilterChip(
-                  label: Text(category),
+                  label: Text(category.label),
                   selected: _selectedCategories.contains(category),
                   onSelected: (isSelected) {
                     setState(() {
@@ -137,9 +157,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
             ),
             const SizedBox(height: 40),
             FilledButton(
-              onPressed: _selectedCategories.isEmpty
-                  ? null
-                  : _showSettingsSummary,
+              onPressed: settings.canStart ? _showSettingsSummary : null,
               child: const Text('Почати гру'),
             ),
           ],
