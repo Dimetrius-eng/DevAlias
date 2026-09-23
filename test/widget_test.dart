@@ -58,7 +58,7 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, -1200));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Почати гру'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.textContaining('Партія готова:'), findsOneWidget);
   });
