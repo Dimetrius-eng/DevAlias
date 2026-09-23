@@ -25,18 +25,31 @@ void main() {
     );
   });
 
-  testWidgets('Start menu explains that navigation is coming later', (
+  testWidgets('New game button opens the game setup page', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const DevAliasApp());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Нова гра'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(
-      find.text('Цей розділ з’явиться в наступних уроках.'),
-      findsOneWidget,
-    );
+    expect(find.text('Налаштування гри створимо в Уроці 6.'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('DevAlias'), findsOneWidget);
+  });
+
+  testWidgets('How to play button opens the rules page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Як грати'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Правила DevAlias'), findsOneWidget);
   });
 }

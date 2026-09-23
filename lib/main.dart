@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'screens/game_setup_page.dart';
+import 'screens/how_to_play_page.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -23,10 +25,9 @@ class DevAliasApp extends StatelessWidget {
 class DevAliasHomePage extends StatelessWidget {
   const DevAliasHomePage({super.key});
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Цей розділ з’явиться в наступних уроках.')),
-    );
+  void _openPage(BuildContext context, Widget page) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (context) => page));
   }
 
   @override
@@ -68,12 +69,12 @@ class DevAliasHomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 48),
                   FilledButton(
-                    onPressed: () => _showComingSoon(context),
+                    onPressed: () => _openPage(context, const GameSetupPage()),
                     child: const Text('Нова гра'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
-                    onPressed: () => _showComingSoon(context),
+                    onPressed: () => _openPage(context, const HowToPlayPage()),
                     child: const Text('Як грати'),
                   ),
                 ],
