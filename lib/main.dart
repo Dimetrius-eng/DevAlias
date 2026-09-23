@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme/app_theme.dart';
+
 void main() {
   runApp(const DevAliasApp());
 }
@@ -12,10 +14,7 @@ class DevAliasApp extends StatelessWidget {
     return MaterialApp(
       title: 'DevAlias',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF635BFF)),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const DevAliasHomePage(),
     );
   }
@@ -43,7 +42,10 @@ class DevAliasHomePage extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
-              const Text('IT-гра для команд і справжніх девелоперів'),
+              Text(
+                'IT-гра для команд і справжніх девелоперів',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
             ],
           ),
         ),
