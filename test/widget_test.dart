@@ -1,30 +1,77 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:devalias/main.dart';
+import 'package:devalias/theme/app_theme.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('DevAlias start screen displays its menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('DevAlias'), findsOneWidget);
+    expect(find.text('Нова гра'), findsOneWidget);
+    expect(find.text('Як грати'), findsOneWidget);
+    expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
+    expect(
+      tester
+          .widget<MaterialApp>(find.byType(MaterialApp))
+          .theme
+          ?.colorScheme
+          .primary,
+      AppTheme.primary,
+    );
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('New game page lets a player choose round duration', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Нова гра'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Налаштування гри'), findsOneWidget);
+
+    await tester.tap(find.text('90 с'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final durationSelector = find
+        .byWidgetPredicate((widget) => widget is SegmentedButton<int>)
+        .first;
+    expect(tester.widget<SegmentedButton<int>>(durationSelector).selected, {
+      90,
+    });
+  });
+
+  testWidgets('Game settings show a summary after starting', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Нова гра'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Почати гру'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Партія готова:'), findsOneWidget);
+  });
+
+  testWidgets('How to play button opens the rules page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Як грати'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Правила DevAlias'), findsOneWidget);
   });
 }
