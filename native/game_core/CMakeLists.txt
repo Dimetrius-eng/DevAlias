@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(devalias_game_core LANGUAGES CXX)
 
 set(DEVALIAS_GAME_CORE_SOURCES
+    src/c_api.cpp
     src/game_engine.cpp
     src/game_types.cpp
     src/word_deck.cpp
@@ -38,6 +39,7 @@ if(DEVALIAS_BUILD_TESTS AND NOT ANDROID)
     add_test(NAME ${target_name} COMMAND ${target_name})
   endfunction()
 
+  add_game_core_test(c_api_test tests/c_api_test.cpp)
   add_game_core_test(game_types_test tests/game_types_test.cpp)
   add_game_core_test(word_deck_test tests/word_deck_test.cpp)
   add_game_core_test(game_engine_test tests/game_engine_test.cpp)

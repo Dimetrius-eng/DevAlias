@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/asset_word_repository.dart';
 import '../domain/difficulty.dart';
+import '../platform/native_game_core.dart';
 import '../domain/game_settings.dart';
 import '../domain/team.dart';
 import '../domain/word_category.dart';
@@ -41,6 +42,10 @@ class _GameSetupPageState extends State<GameSetupPage> {
       return;
     }
 
+    final nativeVersion = NativeGameCore.instance.apiVersion;
+    final nativeCoreStatus = nativeVersion == null
+        ? ''
+        : ' C++ ядро v$nativeVersion завантажено.';
     final categories = settings.categories
         .map((category) => category.label)
         .join(', ');
@@ -51,7 +56,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
           'Партія готова: ${settings.firstTeam.name} проти '
           '${settings.secondTeam.name}, ${settings.roundCount} раунди по '
           '${settings.roundDuration.inSeconds} с. У колоді: ${words.length} '
-          'слів. Категорії: $categories.',
+          'слів. Категорії: $categories.$nativeCoreStatus',
         ),
       ),
     );
