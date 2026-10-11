@@ -119,7 +119,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
             ),
             const SizedBox(height: 32),
             Text(
-              'Кількість раундів',
+              'Раундів для кожної команди',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
