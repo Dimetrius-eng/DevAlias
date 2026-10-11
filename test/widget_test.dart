@@ -70,9 +70,10 @@ void main() {
     expect(find.text('Команда 1 пояснює'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
     expect(find.text('Команда 1: 0  •  Команда 2: 0'), findsOneWidget);
+    expect(find.byKey(const ValueKey('word-transition')), findsOneWidget);
 
     await tester.tap(find.text('Вгадано'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Компілятор'), findsOneWidget);
