@@ -69,12 +69,12 @@ void main() {
     expect(find.text('Раунд 1 із 3'), findsOneWidget);
     expect(find.text('Команда 1 пояснює'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
-    expect(find.text('Рахунок: 0'), findsOneWidget);
+    expect(find.text('Команда 1: 0  •  Команда 2: 0'), findsOneWidget);
 
     await tester.tap(find.text('Вгадано'));
     await tester.pump();
 
-    expect(find.text('Рахунок: 1'), findsOneWidget);
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Компілятор'), findsOneWidget);
 
     await tester.fling(
@@ -84,7 +84,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Рахунок: 1'), findsOneWidget);
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Репозиторій'), findsOneWidget);
 
     await tester.fling(
@@ -94,7 +94,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Рахунок: 2'), findsOneWidget);
+    expect(find.text('Команда 1: 2  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
   });
 
@@ -138,6 +138,48 @@ void main() {
 
     expect(find.text('Час вийшов'), findsOneWidget);
     expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
+  });
+
+  testWidgets('Next round changes the active team and keeps the score', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 1),
+      roundCount: 2,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'test-word',
+        term: 'Тестовий термін',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+    await tester.tap(find.text('Вгадано'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Команда 2 пояснює'), findsOneWidget);
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Показати підсумок партії'));
+    await tester.pump();
+
+    expect(find.text('Партію завершено'), findsOneWidget);
+    expect(find.text('Команда 1 перемагає'), findsOneWidget);
   });
 
   testWidgets('How to play button opens the rules page', (
