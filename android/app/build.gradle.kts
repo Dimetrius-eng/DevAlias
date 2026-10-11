@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.dimetriuseng.devalias"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "30.0.16248370"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -15,6 +15,11 @@ android {
     }
 
     defaultConfig {
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DDEVALIAS_BUILD_TESTS=OFF")
+            }
+        }
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.dimetriuseng.devalias"
         // You can update the following values to match your application needs.
@@ -27,6 +32,13 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("../../native/game_core/CMakeLists.txt")
+            version = "4.1.2"
+        }
     }
 
     buildTypes {
