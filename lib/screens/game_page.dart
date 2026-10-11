@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
+import '../platform/game_feedback.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({
@@ -31,6 +32,7 @@ class _GamePageState extends State<GamePage> {
   var _isPaused = false;
   var _isRoundFinished = false;
   var _isGameFinished = false;
+  var _lastActionWasGuess = false;
 
   GameWord get _currentWord => widget.words[_currentWordIndex];
   bool get _isFirstTeamTurn => _roundIndex.isEven;
@@ -125,7 +127,10 @@ class _GamePageState extends State<GamePage> {
       return;
     }
 
+    unawaited(isGuessed ? GameFeedback.guessed() : GameFeedback.skipped());
+
     setState(() {
+      _lastActionWasGuess = isGuessed;
       if (isGuessed) {
         if (_isFirstTeamTurn) {
           _firstTeamScore += 1;
@@ -243,27 +248,57 @@ class _GamePageState extends State<GamePage> {
                                           ? _showGameResult
                                           : _startNextRound,
                                     )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Термін',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelLarge,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    currentWord.term,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(fontSize: 40),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Chip(label: Text(currentWord.category.label)),
-                                ],
+                            : AnimatedSwitcher(
+                                key: const ValueKey('word-transition'),
+                                duration: const Duration(milliseconds: 220),
+                                transitionBuilder: (child, animation) {
+                                  final offset =
+                                      Tween<Offset>(
+                                        begin: Offset(
+                                          _lastActionWasGuess ? 0.12 : -0.12,
+                                          0,
+                                        ),
+                                        end: Offset.zero,
+                                      ).animate(
+                                        CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOut,
+                                        ),
+                                      );
+
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: offset,
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Column(
+                                  key: ValueKey(currentWord.id),
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Термін',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      currentWord.term,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(fontSize: 40),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Chip(
+                                      label: Text(currentWord.category.label),
+                                    ),
+                                  ],
+                                ),
                               ),
                       ),
                     ),
