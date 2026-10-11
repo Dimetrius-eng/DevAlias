@@ -141,6 +141,50 @@ void main() {
     expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
   });
 
+  testWidgets('Round summary shows guessed and skipped word history', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 3),
+      roundCount: 1,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'first-word',
+        term: 'Перше слово',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+      GameWord(
+        id: 'second-word',
+        term: 'Друге слово',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+    await tester.tap(find.text('Вгадано'));
+    await tester.pump();
+    await tester.tap(find.text('Пропущено'));
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.text('Підсумок раунду'), findsOneWidget);
+    expect(find.text('У раунді: +1 бал'), findsOneWidget);
+    expect(find.text('Вгадані (1)'), findsOneWidget);
+    expect(find.text('Пропущені (1)'), findsOneWidget);
+    expect(find.text('Перше слово'), findsOneWidget);
+    expect(find.text('Друге слово'), findsOneWidget);
+  });
+
   testWidgets('Each team plays every selected round before the game ends', (
     WidgetTester tester,
   ) async {
@@ -195,6 +239,8 @@ void main() {
 
     expect(find.text('Партію завершено'), findsOneWidget);
     expect(find.text('Команда 1 перемагає'), findsOneWidget);
+    expect(find.text('Історія слів'), findsOneWidget);
+    expect(find.text('Тестовий термін — Команда 1'), findsOneWidget);
 
     final replayButton = find.text('Зіграти ще раз');
     await tester.ensureVisible(replayButton);
