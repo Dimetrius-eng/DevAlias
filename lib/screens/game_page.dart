@@ -106,6 +106,20 @@ class _GamePageState extends State<GamePage> {
     setState(() => _isGameFinished = true);
   }
 
+  void _restartGame() {
+    setState(() {
+      _currentWordIndex = 0;
+      _roundIndex = 0;
+      _firstTeamScore = 0;
+      _secondTeamScore = 0;
+      _secondsRemaining = widget.settings.roundDuration.inSeconds;
+      _isPaused = false;
+      _isRoundFinished = false;
+      _isGameFinished = false;
+    });
+    _startTimer();
+  }
+
   void _handleCard({required bool isGuessed}) {
     if (_isPaused || _isRoundFinished) {
       return;
@@ -214,6 +228,7 @@ class _GamePageState extends State<GamePage> {
                                       secondTeamName:
                                           widget.settings.secondTeam.name,
                                       secondTeamScore: _secondTeamScore,
+                                      onReplay: _restartGame,
                                       onReturnToSetup: () =>
                                           Navigator.of(context).pop(),
                                     )
@@ -338,6 +353,7 @@ class _GameFinishedContent extends StatelessWidget {
     required this.firstTeamScore,
     required this.secondTeamName,
     required this.secondTeamScore,
+    required this.onReplay,
     required this.onReturnToSetup,
   });
 
@@ -345,6 +361,7 @@ class _GameFinishedContent extends StatelessWidget {
   final int firstTeamScore;
   final String secondTeamName;
   final int secondTeamScore;
+  final VoidCallback onReplay;
   final VoidCallback onReturnToSetup;
 
   String get _winnerText {
@@ -373,6 +390,11 @@ class _GameFinishedContent extends StatelessWidget {
         const SizedBox(height: 20),
         Text(_winnerText, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 28),
+        OutlinedButton(
+          onPressed: onReplay,
+          child: const Text('Зіграти ще раз'),
+        ),
+        const SizedBox(height: 12),
         FilledButton(
           onPressed: onReturnToSetup,
           child: const Text('До налаштувань'),
