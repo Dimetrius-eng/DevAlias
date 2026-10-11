@@ -36,7 +36,9 @@ class _GamePageState extends State<GamePage> {
 
   GameWord get _currentWord => widget.words[_currentWordIndex];
   bool get _isFirstTeamTurn => _roundIndex.isEven;
-  bool get _isFinalRound => _roundIndex + 1 == widget.settings.roundCount;
+  int get _teamRoundNumber => _roundIndex ~/ 2 + 1;
+  int get _totalTurnCount => widget.settings.roundCount * 2;
+  bool get _isFinalRound => _roundIndex + 1 == _totalTurnCount;
   String get _activeTeamName => _isFirstTeamTurn
       ? widget.settings.firstTeam.name
       : widget.settings.secondTeam.name;
@@ -163,9 +165,7 @@ class _GamePageState extends State<GamePage> {
           onPressed: () => Navigator.of(context).pop(),
           tooltip: 'Вийти з гри',
         ),
-        title: Text(
-          'Раунд ${_roundIndex + 1} із ${widget.settings.roundCount}',
-        ),
+        title: Text('Раунд $_teamRoundNumber із ${widget.settings.roundCount}'),
         actions: [
           IconButton(
             icon: Icon(

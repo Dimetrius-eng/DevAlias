@@ -141,7 +141,7 @@ void main() {
     expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
   });
 
-  testWidgets('Next round changes the active team and keeps the score', (
+  testWidgets('Each team plays every selected round before the game ends', (
     WidgetTester tester,
   ) async {
     final settings = GameSettings(
@@ -171,9 +171,23 @@ void main() {
     await tester.tap(find.text('Наступний раунд'));
     await tester.pump();
 
-    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
     expect(find.text('Команда 2 пояснює'), findsOneWidget);
     expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Команда 2 пояснює'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Показати підсумок партії'));
