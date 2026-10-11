@@ -47,7 +47,7 @@ void main() {
     });
   });
 
-  testWidgets('Game settings open the first game card', (
+  testWidgets('Game controls advance cards and count guessed terms', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const DevAliasApp());
@@ -63,10 +63,33 @@ void main() {
     expect(find.text('Раунд 1 із 3'), findsOneWidget);
     expect(find.text('Команда 1 пояснює'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
-    expect(
-      find.text('Керування карткою додамо в Уроці 15.'),
-      findsOneWidget,
+    expect(find.text('Рахунок: 0'), findsOneWidget);
+
+    await tester.tap(find.text('Вгадано'));
+    await tester.pump();
+
+    expect(find.text('Рахунок: 1'), findsOneWidget);
+    expect(find.text('Компілятор'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(const ValueKey('game-card')),
+      const Offset(-500, 0),
+      1000,
     );
+    await tester.pump();
+
+    expect(find.text('Рахунок: 1'), findsOneWidget);
+    expect(find.text('Репозиторій'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(const ValueKey('game-card')),
+      const Offset(500, 0),
+      1000,
+    );
+    await tester.pump();
+
+    expect(find.text('Рахунок: 2'), findsOneWidget);
+    expect(find.text('Алгоритм'), findsOneWidget);
   });
 
   testWidgets('How to play button opens the rules page', (
