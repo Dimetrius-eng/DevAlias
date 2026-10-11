@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:devalias/domain/difficulty.dart';
+import 'package:devalias/domain/game_settings.dart';
+import 'package:devalias/domain/game_word.dart';
+import 'package:devalias/domain/team.dart';
+import 'package:devalias/domain/word_category.dart';
 import 'package:devalias/main.dart';
+import 'package:devalias/screens/game_page.dart';
 import 'package:devalias/theme/app_theme.dart';
 
 void main() {
@@ -90,6 +96,48 @@ void main() {
 
     expect(find.text('Рахунок: 2'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
+  });
+
+  testWidgets('Round timer pauses and finishes with the last word', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 2),
+      roundCount: 1,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'test-word',
+        term: 'Тестовий термін',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Пауза'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('Гра на паузі'), findsOneWidget);
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Продовжити'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('Час вийшов'), findsOneWidget);
+    expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
   });
 
   testWidgets('How to play button opens the rules page', (
