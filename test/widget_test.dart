@@ -47,7 +47,7 @@ void main() {
     });
   });
 
-  testWidgets('Game settings show a summary after starting', (
+  testWidgets('Game settings open the first game card', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const DevAliasApp());
@@ -60,7 +60,13 @@ void main() {
     await tester.tap(find.text('Почати гру'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Партія готова:'), findsOneWidget);
+    expect(find.text('Раунд 1 із 3'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+    expect(find.text('Алгоритм'), findsOneWidget);
+    expect(
+      find.text('Керування карткою додамо в Уроці 15.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('How to play button opens the rules page', (

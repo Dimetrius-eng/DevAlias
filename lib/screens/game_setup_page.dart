@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../data/asset_word_repository.dart';
 import '../domain/difficulty.dart';
-import '../platform/native_game_core.dart';
 import '../domain/game_settings.dart';
 import '../domain/team.dart';
 import '../domain/word_category.dart';
+import '../platform/native_game_core.dart';
+import 'game_page.dart';
 
 class GameSetupPage extends StatefulWidget {
   const GameSetupPage({super.key});
@@ -34,7 +35,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
     );
   }
 
-  Future<void> _showSettingsSummary() async {
+  Future<void> _startGame() async {
     final settings = _gameSettings;
     final words = await _wordRepository.loadForSettings(settings);
 
@@ -42,21 +43,21 @@ class _GameSetupPageState extends State<GameSetupPage> {
       return;
     }
 
-    final nativeVersion = NativeGameCore.instance.apiVersion;
-    final nativeCoreStatus = nativeVersion == null
-        ? ''
-        : ' C++ ядро v$nativeVersion завантажено.';
-    final categories = settings.categories
-        .map((category) => category.label)
-        .join(', ');
+    if (words.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Для вибраних налаштувань поки немає слів.'),
+        ),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Партія готова: ${settings.firstTeam.name} проти '
-          '${settings.secondTeam.name}, ${settings.roundCount} раунди по '
-          '${settings.roundDuration.inSeconds} с. У колоді: ${words.length} '
-          'слів. Категорії: $categories.$nativeCoreStatus',
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => GamePage(
+          settings: settings,
+          words: words,
+          nativeCoreVersion: NativeGameCore.instance.apiVersion,
         ),
       ),
     );
@@ -171,7 +172,7 @@ class _GameSetupPageState extends State<GameSetupPage> {
             ),
             const SizedBox(height: 40),
             FilledButton(
-              onPressed: settings.canStart ? _showSettingsSummary : null,
+              onPressed: settings.canStart ? _startGame : null,
               child: const Text('Почати гру'),
             ),
           ],
