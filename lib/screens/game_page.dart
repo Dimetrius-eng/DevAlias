@@ -23,13 +23,23 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage> {
   var _currentWordIndex = 0;
-  var _score = 0;
+  var _roundIndex = 0;
+  var _firstTeamScore = 0;
+  var _secondTeamScore = 0;
   late int _secondsRemaining;
   Timer? _roundTimer;
   var _isPaused = false;
   var _isRoundFinished = false;
+  var _isGameFinished = false;
 
   GameWord get _currentWord => widget.words[_currentWordIndex];
+  bool get _isFirstTeamTurn => _roundIndex.isEven;
+  bool get _isFinalRound => _roundIndex + 1 == widget.settings.roundCount;
+  String get _activeTeamName => _isFirstTeamTurn
+      ? widget.settings.firstTeam.name
+      : widget.settings.secondTeam.name;
+  int get _activeTeamScore =>
+      _isFirstTeamTurn ? _firstTeamScore : _secondTeamScore;
 
   String get _formattedTime {
     final minutes = _secondsRemaining ~/ 60;
@@ -43,13 +53,18 @@ class _GamePageState extends State<GamePage> {
   void initState() {
     super.initState();
     _secondsRemaining = widget.settings.roundDuration.inSeconds;
-    _roundTimer = Timer.periodic(const Duration(seconds: 1), _tick);
+    _startTimer();
   }
 
   @override
   void dispose() {
     _roundTimer?.cancel();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _roundTimer?.cancel();
+    _roundTimer = Timer.periodic(const Duration(seconds: 1), _tick);
   }
 
   void _tick(Timer timer) {
@@ -77,6 +92,20 @@ class _GamePageState extends State<GamePage> {
     setState(() => _isPaused = !_isPaused);
   }
 
+  void _startNextRound() {
+    setState(() {
+      _roundIndex += 1;
+      _secondsRemaining = widget.settings.roundDuration.inSeconds;
+      _isPaused = false;
+      _isRoundFinished = false;
+    });
+    _startTimer();
+  }
+
+  void _showGameResult() {
+    setState(() => _isGameFinished = true);
+  }
+
   void _handleCard({required bool isGuessed}) {
     if (_isPaused || _isRoundFinished) {
       return;
@@ -84,7 +113,11 @@ class _GamePageState extends State<GamePage> {
 
     setState(() {
       if (isGuessed) {
-        _score += 1;
+        if (_isFirstTeamTurn) {
+          _firstTeamScore += 1;
+        } else {
+          _secondTeamScore += 1;
+        }
       }
       _currentWordIndex = (_currentWordIndex + 1) % widget.words.length;
     });
@@ -111,7 +144,9 @@ class _GamePageState extends State<GamePage> {
           onPressed: () => Navigator.of(context).pop(),
           tooltip: 'Вийти з гри',
         ),
-        title: Text('Раунд 1 із ${widget.settings.roundCount}'),
+        title: Text(
+          'Раунд ${_roundIndex + 1} із ${widget.settings.roundCount}',
+        ),
         actions: [
           IconButton(
             icon: Icon(
@@ -135,13 +170,14 @@ class _GamePageState extends State<GamePage> {
               ),
               const SizedBox(height: 6),
               Text(
-                '${widget.settings.firstTeam.name} пояснює',
+                '$_activeTeamName пояснює',
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Рахунок: $_score',
+                '${widget.settings.firstTeam.name}: $_firstTeamScore  •  '
+                '${widget.settings.secondTeam.name}: $_secondTeamScore',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -170,12 +206,28 @@ class _GamePageState extends State<GamePage> {
                       padding: const EdgeInsets.all(24),
                       child: SingleChildScrollView(
                         child: _isRoundFinished
-                            ? _RoundFinishedContent(
-                                score: _score,
-                                lastWord: currentWord.term,
-                                onReturnToSetup: () =>
-                                    Navigator.of(context).pop(),
-                              )
+                            ? _isGameFinished
+                                  ? _GameFinishedContent(
+                                      firstTeamName:
+                                          widget.settings.firstTeam.name,
+                                      firstTeamScore: _firstTeamScore,
+                                      secondTeamName:
+                                          widget.settings.secondTeam.name,
+                                      secondTeamScore: _secondTeamScore,
+                                      onReturnToSetup: () =>
+                                          Navigator.of(context).pop(),
+                                    )
+                                  : _RoundFinishedContent(
+                                      activeTeamName: _activeTeamName,
+                                      activeTeamScore: _activeTeamScore,
+                                      lastWord: currentWord.term,
+                                      actionLabel: _isFinalRound
+                                          ? 'Показати підсумок партії'
+                                          : 'Наступний раунд',
+                                      onAction: _isFinalRound
+                                          ? _showGameResult
+                                          : _startNextRound,
+                                    )
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -250,14 +302,18 @@ class _GamePageState extends State<GamePage> {
 
 class _RoundFinishedContent extends StatelessWidget {
   const _RoundFinishedContent({
-    required this.score,
+    required this.activeTeamName,
+    required this.activeTeamScore,
     required this.lastWord,
-    required this.onReturnToSetup,
+    required this.actionLabel,
+    required this.onAction,
   });
 
-  final int score;
+  final String activeTeamName;
+  final int activeTeamScore;
   final String lastWord;
-  final VoidCallback onReturnToSetup;
+  final String actionLabel;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -266,9 +322,56 @@ class _RoundFinishedContent extends StatelessWidget {
       children: [
         Text('Час вийшов', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 12),
-        Text('Результат раунду: $score'),
+        Text('$activeTeamName: $activeTeamScore балів'),
         const SizedBox(height: 20),
         Text('Останній термін: $lastWord', textAlign: TextAlign.center),
+        const SizedBox(height: 28),
+        FilledButton(onPressed: onAction, child: Text(actionLabel)),
+      ],
+    );
+  }
+}
+
+class _GameFinishedContent extends StatelessWidget {
+  const _GameFinishedContent({
+    required this.firstTeamName,
+    required this.firstTeamScore,
+    required this.secondTeamName,
+    required this.secondTeamScore,
+    required this.onReturnToSetup,
+  });
+
+  final String firstTeamName;
+  final int firstTeamScore;
+  final String secondTeamName;
+  final int secondTeamScore;
+  final VoidCallback onReturnToSetup;
+
+  String get _winnerText {
+    if (firstTeamScore == secondTeamScore) {
+      return 'Нічия';
+    }
+
+    final winner = firstTeamScore > secondTeamScore
+        ? firstTeamName
+        : secondTeamName;
+    return '$winner перемагає';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Партію завершено',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        Text('$firstTeamName: $firstTeamScore'),
+        Text('$secondTeamName: $secondTeamScore'),
+        const SizedBox(height: 20),
+        Text(_winnerText, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 28),
         FilledButton(
           onPressed: onReturnToSetup,
