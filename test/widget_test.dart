@@ -180,6 +180,16 @@ void main() {
 
     expect(find.text('Партію завершено'), findsOneWidget);
     expect(find.text('Команда 1 перемагає'), findsOneWidget);
+
+    final replayButton = find.text('Зіграти ще раз');
+    await tester.ensureVisible(replayButton);
+    await tester.tap(replayButton);
+    await tester.pump();
+
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+    expect(find.text('Команда 1: 0  •  Команда 2: 0'), findsOneWidget);
+    expect(find.text('00:01'), findsOneWidget);
   });
 
   testWidgets('How to play button opens the rules page', (
