@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
+import '../domain/round_word_result.dart';
 import '../platform/game_feedback.dart';
 
 class GamePage extends StatefulWidget {
@@ -33,6 +34,8 @@ class _GamePageState extends State<GamePage> {
   var _isRoundFinished = false;
   var _isGameFinished = false;
   var _lastActionWasGuess = false;
+  final _roundHistory = <RoundWordResult>[];
+  final _gameHistory = <RoundWordResult>[];
 
   GameWord get _currentWord => widget.words[_currentWordIndex];
   bool get _isFirstTeamTurn => _roundIndex.isEven;
@@ -102,6 +105,7 @@ class _GamePageState extends State<GamePage> {
       _secondsRemaining = widget.settings.roundDuration.inSeconds;
       _isPaused = false;
       _isRoundFinished = false;
+      _roundHistory.clear();
     });
     _startTimer();
   }
@@ -120,6 +124,8 @@ class _GamePageState extends State<GamePage> {
       _isPaused = false;
       _isRoundFinished = false;
       _isGameFinished = false;
+      _roundHistory.clear();
+      _gameHistory.clear();
     });
     _startTimer();
   }
@@ -131,8 +137,16 @@ class _GamePageState extends State<GamePage> {
 
     unawaited(isGuessed ? GameFeedback.guessed() : GameFeedback.skipped());
 
+    final wordResult = RoundWordResult(
+      word: _currentWord,
+      teamName: _activeTeamName,
+      outcome: isGuessed ? WordOutcome.guessed : WordOutcome.skipped,
+    );
+
     setState(() {
       _lastActionWasGuess = isGuessed;
+      _roundHistory.add(wordResult);
+      _gameHistory.add(wordResult);
       if (isGuessed) {
         if (_isFirstTeamTurn) {
           _firstTeamScore += 1;
@@ -233,6 +247,7 @@ class _GamePageState extends State<GamePage> {
                                       secondTeamName:
                                           widget.settings.secondTeam.name,
                                       secondTeamScore: _secondTeamScore,
+                                      history: List.unmodifiable(_gameHistory),
                                       onReplay: _restartGame,
                                       onReturnToSetup: () =>
                                           Navigator.of(context).pop(),
@@ -240,13 +255,11 @@ class _GamePageState extends State<GamePage> {
                                   : _RoundFinishedContent(
                                       activeTeamName: _activeTeamName,
                                       activeTeamScore: _activeTeamScore,
+                                      roundScore: _roundHistory
+                                          .where((result) => result.wasGuessed)
+                                          .length,
+                                      results: List.unmodifiable(_roundHistory),
                                       lastWord: currentWord.term,
-                                      actionLabel: _isFinalRound
-                                          ? 'Показати підсумок партії'
-                                          : 'Наступний раунд',
-                                      onAction: _isFinalRound
-                                          ? _showGameResult
-                                          : _startNextRound,
                                     )
                             : AnimatedSwitcher(
                                 key: const ValueKey('word-transition'),
@@ -306,29 +319,39 @@ class _GamePageState extends State<GamePage> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isPaused || _isRoundFinished
-                          ? null
-                          : () => _handleCard(isGuessed: false),
-                      icon: const Icon(Icons.skip_next_rounded),
-                      label: const Text('Пропущено'),
-                    ),
+              if (_isRoundFinished && !_isGameFinished)
+                FilledButton(
+                  onPressed: _isFinalRound ? _showGameResult : _startNextRound,
+                  child: Text(
+                    _isFinalRound
+                        ? 'Показати підсумок партії'
+                        : 'Наступний раунд',
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _isPaused || _isRoundFinished
-                          ? null
-                          : () => _handleCard(isGuessed: true),
-                      icon: const Icon(Icons.check_rounded),
-                      label: const Text('Вгадано'),
+                )
+              else if (!_isRoundFinished)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isPaused
+                            ? null
+                            : () => _handleCard(isGuessed: false),
+                        icon: const Icon(Icons.skip_next_rounded),
+                        label: const Text('Пропущено'),
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _isPaused
+                            ? null
+                            : () => _handleCard(isGuessed: true),
+                        icon: const Icon(Icons.check_rounded),
+                        label: const Text('Вгадано'),
+                      ),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 16),
               if (widget.nativeCoreVersion != null)
                 Text(
@@ -354,16 +377,18 @@ class _RoundFinishedContent extends StatelessWidget {
   const _RoundFinishedContent({
     required this.activeTeamName,
     required this.activeTeamScore,
+    required this.roundScore,
+    required this.results,
     required this.lastWord,
-    required this.actionLabel,
-    required this.onAction,
   });
 
   final String activeTeamName;
   final int activeTeamScore;
+  final int roundScore;
+  final List<RoundWordResult> results;
   final String lastWord;
-  final String actionLabel;
-  final VoidCallback onAction;
+
+  String get _scoreLabel => roundScore == 1 ? 'бал' : 'балів';
 
   @override
   Widget build(BuildContext context) {
@@ -372,11 +397,15 @@ class _RoundFinishedContent extends StatelessWidget {
       children: [
         Text('Час вийшов', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 12),
+        Text('Підсумок раунду', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text('У раунді: +$roundScore $_scoreLabel'),
+        const SizedBox(height: 8),
         Text('$activeTeamName: $activeTeamScore балів'),
         const SizedBox(height: 20),
         Text('Останній термін: $lastWord', textAlign: TextAlign.center),
-        const SizedBox(height: 28),
-        FilledButton(onPressed: onAction, child: Text(actionLabel)),
+        const SizedBox(height: 24),
+        _RoundHistoryContent(results: results),
       ],
     );
   }
@@ -388,6 +417,7 @@ class _GameFinishedContent extends StatelessWidget {
     required this.firstTeamScore,
     required this.secondTeamName,
     required this.secondTeamScore,
+    required this.history,
     required this.onReplay,
     required this.onReturnToSetup,
   });
@@ -396,6 +426,7 @@ class _GameFinishedContent extends StatelessWidget {
   final int firstTeamScore;
   final String secondTeamName;
   final int secondTeamScore;
+  final List<RoundWordResult> history;
   final VoidCallback onReplay;
   final VoidCallback onReturnToSetup;
 
@@ -434,7 +465,96 @@ class _GameFinishedContent extends StatelessWidget {
           onPressed: onReturnToSetup,
           child: const Text('До налаштувань'),
         ),
+        const SizedBox(height: 28),
+        Text('Історія слів', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        _GameHistoryContent(results: history),
       ],
+    );
+  }
+}
+
+class _RoundHistoryContent extends StatelessWidget {
+  const _RoundHistoryContent({required this.results});
+
+  final List<RoundWordResult> results;
+
+  @override
+  Widget build(BuildContext context) {
+    final guessed = results.where((result) => result.wasGuessed).toList();
+    final skipped = results.where((result) => !result.wasGuessed).toList();
+
+    if (results.isEmpty) {
+      return const Text('За цей раунд ще не оцінено жодного слова.');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Вгадані (${guessed.length})'),
+        for (final result in guessed)
+          _WordHistoryEntry(result: result, icon: Icons.check_rounded),
+        const SizedBox(height: 12),
+        Text('Пропущені (${skipped.length})'),
+        for (final result in skipped)
+          _WordHistoryEntry(result: result, icon: Icons.skip_next_rounded),
+      ],
+    );
+  }
+}
+
+class _GameHistoryContent extends StatelessWidget {
+  const _GameHistoryContent({required this.results});
+
+  final List<RoundWordResult> results;
+
+  @override
+  Widget build(BuildContext context) {
+    if (results.isEmpty) {
+      return const Text('Під час партії ще не оцінено жодного слова.');
+    }
+
+    return Column(
+      children: [
+        for (final result in results)
+          _WordHistoryEntry(
+            result: result,
+            icon: result.wasGuessed
+                ? Icons.check_rounded
+                : Icons.skip_next_rounded,
+            showTeamName: true,
+          ),
+      ],
+    );
+  }
+}
+
+class _WordHistoryEntry extends StatelessWidget {
+  const _WordHistoryEntry({
+    required this.result,
+    required this.icon,
+    this.showTeamName = false,
+  });
+
+  final RoundWordResult result;
+  final IconData icon;
+  final bool showTeamName;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = showTeamName
+        ? '${result.word.term} — ${result.teamName}'
+        : result.word.term;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+        ],
+      ),
     );
   }
 }
