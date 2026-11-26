@@ -45,8 +45,10 @@ int main() {
   assert(first->difficulty == devalias::Difficulty::kMedium);
   assert(second->category == devalias::WordCategory::kGeneralIt);
   assert(deck.RemainingCount() == 0);
-  assert(deck.IsEmpty());
-  assert(deck.Next() == nullptr);
+  assert(!deck.IsEmpty());
+  const devalias::Word* third = deck.Next();
+  assert(third != nullptr);
+  assert(third->id != second->id);
 
   devalias::WordDeck first_deck(CreateWords(), settings, 2026);
   devalias::WordDeck second_deck(CreateWords(), settings, 2026);

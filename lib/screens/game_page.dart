@@ -6,6 +6,7 @@ import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
 import '../domain/round_word_result.dart';
 import '../platform/game_feedback.dart';
+import '../platform/native_game_core.dart';
 
 class GamePage extends StatefulWidget {
   const GamePage({
@@ -36,17 +37,38 @@ class _GamePageState extends State<GamePage> {
   var _lastActionWasGuess = false;
   final _roundHistory = <RoundWordResult>[];
   final _gameHistory = <RoundWordResult>[];
+  NativeGameSession? _nativeSession;
 
-  GameWord get _currentWord => widget.words[_currentWordIndex];
-  bool get _isFirstTeamTurn => _roundIndex.isEven;
-  int get _teamRoundNumber => _roundIndex ~/ 2 + 1;
+  GameWord get _currentWord {
+    final nativeWordId = _nativeSession?.currentWordId;
+    if (nativeWordId != null) {
+      return widget.words.firstWhere(
+        (word) => word.id == nativeWordId,
+        orElse: () => widget.words[_currentWordIndex],
+      );
+    }
+    return widget.words[_currentWordIndex];
+  }
+
+  bool get _isFirstTeamTurn =>
+      _nativeSession?.currentTeamIndex == 0 ||
+      (_nativeSession == null && _roundIndex.isEven);
+  int get _teamRoundNumber =>
+      _nativeSession?.currentRound ?? _roundIndex ~/ 2 + 1;
   int get _totalTurnCount => widget.settings.roundCount * 2;
-  bool get _isFinalRound => _roundIndex + 1 == _totalTurnCount;
+  bool get _isFinalRound => _nativeSession != null
+      ? _nativeSession!.currentRound == widget.settings.roundCount &&
+            _nativeSession!.currentTeamIndex == 1
+      : _roundIndex + 1 == _totalTurnCount;
   String get _activeTeamName => _isFirstTeamTurn
       ? widget.settings.firstTeam.name
       : widget.settings.secondTeam.name;
+  int get _firstTeamDisplayedScore =>
+      _nativeSession?.scoreForTeam(0) ?? _firstTeamScore;
+  int get _secondTeamDisplayedScore =>
+      _nativeSession?.scoreForTeam(1) ?? _secondTeamScore;
   int get _activeTeamScore =>
-      _isFirstTeamTurn ? _firstTeamScore : _secondTeamScore;
+      _isFirstTeamTurn ? _firstTeamDisplayedScore : _secondTeamDisplayedScore;
 
   String get _formattedTime {
     final minutes = _secondsRemaining ~/ 60;
@@ -60,13 +82,29 @@ class _GamePageState extends State<GamePage> {
   void initState() {
     super.initState();
     _secondsRemaining = widget.settings.roundDuration.inSeconds;
+    _createNativeSession();
     _startTimer();
   }
 
   @override
   void dispose() {
     _roundTimer?.cancel();
+    _nativeSession?.dispose();
     super.dispose();
+  }
+
+  void _createNativeSession() {
+    final session = NativeGameCore.instance.createSession(
+      words: widget.words,
+      roundsPerTeam: widget.settings.roundCount,
+    );
+    if (session != null && session.startTurn()) {
+      _nativeSession = session;
+      return;
+    }
+
+    session?.dispose();
+    _nativeSession = null;
   }
 
   void _startTimer() {
@@ -84,6 +122,7 @@ class _GamePageState extends State<GamePage> {
         _secondsRemaining = 0;
         _isRoundFinished = true;
       });
+      unawaited(GameFeedback.roundFinished());
       timer.cancel();
       return;
     }
@@ -100,8 +139,16 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _startNextRound() {
+    final nativeSession = _nativeSession;
+    if (nativeSession != null) {
+      nativeSession.finishTurn();
+      nativeSession.startTurn();
+    }
+
     setState(() {
-      _roundIndex += 1;
+      if (nativeSession == null) {
+        _roundIndex += 1;
+      }
       _secondsRemaining = widget.settings.roundDuration.inSeconds;
       _isPaused = false;
       _isRoundFinished = false;
@@ -111,6 +158,10 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _showGameResult() {
+    final nativeSession = _nativeSession;
+    if (nativeSession != null && !nativeSession.isFinished) {
+      nativeSession.finishTurn();
+    }
     setState(() => _isGameFinished = true);
   }
 
@@ -128,6 +179,8 @@ class _GamePageState extends State<GamePage> {
       _gameHistory.clear();
     });
     _startTimer();
+    _nativeSession?.dispose();
+    _createNativeSession();
   }
 
   void _handleCard({required bool isGuessed}) {
@@ -143,29 +196,31 @@ class _GamePageState extends State<GamePage> {
       outcome: isGuessed ? WordOutcome.guessed : WordOutcome.skipped,
     );
 
+    final nativeSession = _nativeSession;
+    if (nativeSession != null) {
+      final accepted = isGuessed
+          ? nativeSession.guessWord()
+          : nativeSession.skipWord();
+      if (!accepted) {
+        return;
+      }
+    }
+
     setState(() {
       _lastActionWasGuess = isGuessed;
       _roundHistory.add(wordResult);
       _gameHistory.add(wordResult);
-      if (isGuessed) {
+      if (nativeSession == null && isGuessed) {
         if (_isFirstTeamTurn) {
           _firstTeamScore += 1;
         } else {
           _secondTeamScore += 1;
         }
       }
-      _currentWordIndex = (_currentWordIndex + 1) % widget.words.length;
+      if (nativeSession == null) {
+        _currentWordIndex = (_currentWordIndex + 1) % widget.words.length;
+      }
     });
-  }
-
-  void _handleHorizontalDrag(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-
-    if (velocity.abs() < 300) {
-      return;
-    }
-
-    _handleCard(isGuessed: velocity > 0);
   }
 
   @override
@@ -209,8 +264,8 @@ class _GamePageState extends State<GamePage> {
               ),
               const SizedBox(height: 8),
               Text(
-                '${widget.settings.firstTeam.name}: $_firstTeamScore  •  '
-                '${widget.settings.secondTeam.name}: $_secondTeamScore',
+                '${widget.settings.firstTeam.name}: $_firstTeamDisplayedScore  •  '
+                '${widget.settings.secondTeam.name}: $_secondTeamDisplayedScore',
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
@@ -228,12 +283,29 @@ class _GamePageState extends State<GamePage> {
                 ),
               const SizedBox(height: 32),
               Expanded(
-                child: GestureDetector(
-                  key: const ValueKey('game-card'),
-                  onHorizontalDragEnd: _isPaused || _isRoundFinished
-                      ? null
-                      : _handleHorizontalDrag,
+                child: Dismissible(
+                  key: ValueKey(currentWord.id),
+                  direction: _isPaused || _isRoundFinished
+                      ? DismissDirection.none
+                      : DismissDirection.horizontal,
+                  background: const _SwipeActionBackground(
+                    alignment: Alignment.centerLeft,
+                    icon: Icons.check_rounded,
+                    label: 'Вгадано',
+                  ),
+                  secondaryBackground: const _SwipeActionBackground(
+                    alignment: Alignment.centerRight,
+                    icon: Icons.skip_next_rounded,
+                    label: 'Пропущено',
+                    isSkip: true,
+                  ),
+                  onDismissed: (direction) {
+                    _handleCard(
+                      isGuessed: direction == DismissDirection.startToEnd,
+                    );
+                  },
                   child: Card(
+                    key: const ValueKey('game-card'),
                     clipBehavior: Clip.antiAlias,
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -243,10 +315,11 @@ class _GamePageState extends State<GamePage> {
                                   ? _GameFinishedContent(
                                       firstTeamName:
                                           widget.settings.firstTeam.name,
-                                      firstTeamScore: _firstTeamScore,
+                                      firstTeamScore: _firstTeamDisplayedScore,
                                       secondTeamName:
                                           widget.settings.secondTeam.name,
-                                      secondTeamScore: _secondTeamScore,
+                                      secondTeamScore:
+                                          _secondTeamDisplayedScore,
                                       history: List.unmodifiable(_gameHistory),
                                       onReplay: _restartGame,
                                       onReturnToSetup: () =>
@@ -263,12 +336,12 @@ class _GamePageState extends State<GamePage> {
                                     )
                             : AnimatedSwitcher(
                                 key: const ValueKey('word-transition'),
-                                duration: const Duration(milliseconds: 220),
+                                duration: const Duration(milliseconds: 260),
                                 transitionBuilder: (child, animation) {
                                   final offset =
                                       Tween<Offset>(
                                         begin: Offset(
-                                          _lastActionWasGuess ? 0.12 : -0.12,
+                                          _lastActionWasGuess ? -0.12 : 0.12,
                                           0,
                                         ),
                                         end: Offset.zero,
@@ -368,6 +441,39 @@ class _GamePageState extends State<GamePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SwipeActionBackground extends StatelessWidget {
+  const _SwipeActionBackground({
+    required this.alignment,
+    required this.icon,
+    required this.label,
+    this.isSkip = false,
+  });
+
+  final Alignment alignment;
+  final IconData icon;
+  final String label;
+  final bool isSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSkip
+        ? Theme.of(context).colorScheme.errorContainer
+        : Theme.of(context).colorScheme.primaryContainer;
+
+    return Container(
+      alignment: alignment,
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: alignment == Alignment.centerLeft
+            ? [Icon(icon), const SizedBox(width: 8), Text(label)]
+            : [Text(label), const SizedBox(width: 8), Icon(icon)],
       ),
     );
   }

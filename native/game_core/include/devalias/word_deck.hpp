@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <random>
+#include <string>
 #include <vector>
 
 #include "devalias/game_types.hpp"
@@ -19,7 +21,10 @@ class WordDeck {
 
  private:
   std::vector<Word> words_;
+  std::mt19937 random_engine_;
   std::size_t next_index_ = 0;
+  std::string last_word_id_;
+  bool has_last_word_ = false;
 };
 
 }  // namespace devalias

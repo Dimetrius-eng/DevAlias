@@ -83,7 +83,7 @@ void main() {
       const Offset(-500, 0),
       1000,
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Репозиторій'), findsOneWidget);
@@ -93,7 +93,7 @@ void main() {
       const Offset(500, 0),
       1000,
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('Команда 1: 2  •  Команда 2: 0'), findsOneWidget);
     expect(find.text('Алгоритм'), findsOneWidget);
