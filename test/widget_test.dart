@@ -22,6 +22,7 @@ void main() {
     expect(find.text('DevAlias'), findsOneWidget);
     expect(find.text('Нова гра'), findsOneWidget);
     expect(find.text('Історія ігор'), findsOneWidget);
+    expect(find.text('Статистика'), findsOneWidget);
     expect(find.text('Як грати'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
     expect(
@@ -354,5 +355,18 @@ void main() {
       find.textContaining('Тут з’являться завершені партії'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('Statistics opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Статистика'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ваш прогрес'), findsOneWidget);
+    expect(find.text('Досягнення'), findsOneWidget);
   });
 }
