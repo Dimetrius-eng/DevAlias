@@ -24,6 +24,7 @@ void main() {
     expect(find.text('Історія ігор'), findsOneWidget);
     expect(find.text('Статистика'), findsOneWidget);
     expect(find.text('Мій профіль'), findsOneWidget);
+    expect(find.text('Працює без інтернету'), findsOneWidget);
     expect(find.text('Як грати'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
     expect(
