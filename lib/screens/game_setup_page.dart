@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/asset_word_repository.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_settings.dart';
+import '../domain/game_word.dart';
 import '../domain/team.dart';
 import '../domain/word_category.dart';
 import '../platform/native_game_core.dart';
@@ -37,7 +38,18 @@ class _GameSetupPageState extends State<GameSetupPage> {
 
   Future<void> _startGame() async {
     final settings = _gameSettings;
-    final words = await _wordRepository.loadForSettings(settings);
+    List<GameWord> words;
+    try {
+      words = await _wordRepository.loadForSettings(settings);
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не вдалося відкрити локальний словник.')),
+      );
+      return;
+    }
 
     if (!mounted) {
       return;

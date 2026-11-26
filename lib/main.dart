@@ -96,65 +96,78 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
               ),
             );
           },
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const _DevAliasLogo(),
-                  const SizedBox(height: 24),
-                  Text(
-                    'DevAlias',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'IT-гра для команд і справжніх девелоперів',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 48),
-                  FilledButton(
-                    onPressed: () => _openPage(context, const GameSetupPage()),
-                    child: const Text('Нова гра'),
-                  ),
-                  if (_savedGame != null) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _continueGame,
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Продовжити гру'),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _DevAliasLogo(),
+                const SizedBox(height: 24),
+                Text(
+                  'DevAlias',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'IT-гра для команд і справжніх девелоперів',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.offline_bolt_rounded,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Працює без інтернету',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
+                ),
+                const SizedBox(height: 48),
+                FilledButton(
+                  onPressed: () => _openPage(context, const GameSetupPage()),
+                  child: const Text('Нова гра'),
+                ),
+                if (_savedGame != null) ...[
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => _openPage(context, const ProfilePage()),
-                    icon: const Icon(Icons.person_rounded),
-                    label: const Text('Мій профіль'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        _openPage(context, const GameHistoryPage()),
-                    icon: const Icon(Icons.history_rounded),
-                    label: const Text('Історія ігор'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _openPage(context, const StatisticsPage()),
-                    icon: const Icon(Icons.insights_rounded),
-                    label: const Text('Статистика'),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => _openPage(context, const HowToPlayPage()),
-                    child: const Text('Як грати'),
+                    onPressed: _continueGame,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Продовжити гру'),
                   ),
                 ],
-              ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _openPage(context, const ProfilePage()),
+                  icon: const Icon(Icons.person_rounded),
+                  label: const Text('Мій профіль'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _openPage(context, const GameHistoryPage()),
+                  icon: const Icon(Icons.history_rounded),
+                  label: const Text('Історія ігор'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _openPage(context, const StatisticsPage()),
+                  icon: const Icon(Icons.insights_rounded),
+                  label: const Text('Статистика'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => _openPage(context, const HowToPlayPage()),
+                  child: const Text('Як грати'),
+                ),
+              ],
             ),
           ),
         ),
