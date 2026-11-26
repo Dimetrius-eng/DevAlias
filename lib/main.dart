@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'data/unfinished_game_store.dart';
+import 'domain/saved_game.dart';
+import 'screens/game_page.dart';
 import 'screens/game_setup_page.dart';
 import 'screens/how_to_play_page.dart';
 import 'theme/app_theme.dart';
@@ -22,12 +25,55 @@ class DevAliasApp extends StatelessWidget {
   }
 }
 
-class DevAliasHomePage extends StatelessWidget {
+class DevAliasHomePage extends StatefulWidget {
   const DevAliasHomePage({super.key});
+
+  @override
+  State<DevAliasHomePage> createState() => _DevAliasHomePageState();
+}
+
+class _DevAliasHomePageState extends State<DevAliasHomePage> {
+  final _unfinishedGameStore = createUnfinishedGameStore();
+  SavedGame? _savedGame;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedGame();
+  }
+
+  Future<void> _loadSavedGame() async {
+    try {
+      final savedGame = await _unfinishedGameStore.load();
+      if (mounted) {
+        setState(() => _savedGame = savedGame);
+      }
+    } on Object {
+      // The normal "New game" path remains available if local data is bad.
+    }
+  }
 
   void _openPage(BuildContext context, Widget page) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (context) => page));
+  }
+
+  Future<void> _continueGame() async {
+    final savedGame = _savedGame;
+    if (savedGame == null) {
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => GamePage(
+          settings: savedGame.settings,
+          words: savedGame.words,
+          initialGame: savedGame,
+        ),
+      ),
+    );
+    await _loadSavedGame();
   }
 
   @override
@@ -72,6 +118,14 @@ class DevAliasHomePage extends StatelessWidget {
                     onPressed: () => _openPage(context, const GameSetupPage()),
                     child: const Text('Нова гра'),
                   ),
+                  if (_savedGame != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _continueGame,
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('Продовжити гру'),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () => _openPage(context, const HowToPlayPage()),

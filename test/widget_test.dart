@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:devalias/domain/difficulty.dart';
 import 'package:devalias/domain/game_settings.dart';
 import 'package:devalias/domain/game_word.dart';
+import 'package:devalias/domain/round_word_result.dart';
+import 'package:devalias/domain/saved_game.dart';
 import 'package:devalias/domain/team.dart';
 import 'package:devalias/domain/word_category.dart';
 import 'package:devalias/main.dart';
@@ -139,6 +141,78 @@ void main() {
 
     expect(find.text('Час вийшов'), findsOneWidget);
     expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
+  });
+
+  testWidgets('Saved game restores the exact visible turn state', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Frontend'),
+      secondTeam: const Team(name: 'Backend'),
+      roundDuration: const Duration(seconds: 60),
+      roundCount: 2,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'first-word',
+        term: 'Алгоритм',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+      GameWord(
+        id: 'second-word',
+        term: 'Контейнер',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+    final savedGame = SavedGame(
+      settings: settings,
+      words: words,
+      currentWordId: 'second-word',
+      roundIndex: 1,
+      firstTeamScore: 1,
+      secondTeamScore: 0,
+      secondsRemaining: 37,
+      isPaused: true,
+      isRoundFinished: false,
+      roundHistory: const [],
+      gameHistory: [
+        RoundWordResult(
+          word: words[0],
+          teamName: 'Frontend',
+          outcome: WordOutcome.guessed,
+        ),
+      ],
+      completedRoundHistories: [
+        [
+          RoundWordResult(
+            word: words[0],
+            teamName: 'Frontend',
+            outcome: WordOutcome.guessed,
+          ),
+        ],
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(
+          settings: settings,
+          words: words,
+          initialGame: savedGame,
+        ),
+      ),
+    );
+
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
+    expect(find.text('Backend пояснює'), findsOneWidget);
+    expect(find.text('Frontend: 1  •  Backend: 0'), findsOneWidget);
+    expect(find.text('00:37'), findsOneWidget);
+    expect(find.text('Гра на паузі'), findsOneWidget);
+    expect(find.text('Контейнер'), findsOneWidget);
   });
 
   testWidgets('Round summary shows guessed and skipped word history', (

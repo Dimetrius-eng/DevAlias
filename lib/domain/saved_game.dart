@@ -18,9 +18,15 @@ class SavedGame {
     required this.isRoundFinished,
     required List<RoundWordResult> roundHistory,
     required List<RoundWordResult> gameHistory,
+    required List<List<RoundWordResult>> completedRoundHistories,
   }) : words = List.unmodifiable(words),
        roundHistory = List.unmodifiable(roundHistory),
-       gameHistory = List.unmodifiable(gameHistory);
+       gameHistory = List.unmodifiable(gameHistory),
+       completedRoundHistories = List<List<RoundWordResult>>.unmodifiable(
+         completedRoundHistories.map(
+           (history) => List<RoundWordResult>.unmodifiable(history),
+         ),
+       );
 
   final GameSettings settings;
   final List<GameWord> words;
@@ -33,6 +39,11 @@ class SavedGame {
   final bool isRoundFinished;
   final List<RoundWordResult> roundHistory;
   final List<RoundWordResult> gameHistory;
+
+  /// Actions from every finished turn, in their original order.
+  ///
+  /// This lets Lesson 20 rebuild the deterministic C++ deck precisely.
+  final List<List<RoundWordResult>> completedRoundHistories;
 
   Map<String, Object?> toJson() {
     return {
@@ -56,6 +67,9 @@ class SavedGame {
       'isRoundFinished': isRoundFinished,
       'roundHistory': roundHistory.map(_resultToJson).toList(),
       'gameHistory': gameHistory.map(_resultToJson).toList(),
+      'completedRoundHistories': completedRoundHistories
+          .map((history) => history.map(_resultToJson).toList())
+          .toList(),
     };
   }
 
@@ -92,6 +106,14 @@ class SavedGame {
           .toList(),
       gameHistory: _list(json['gameHistory'])
           .map((value) => _resultFromJson(value, wordsById))
+          .toList(),
+      completedRoundHistories: _list(json['completedRoundHistories'])
+          .map(
+            (history) =>
+                _list(history)
+                    .map((value) => _resultFromJson(value, wordsById))
+                    .toList(),
+          )
           .toList(),
     );
   }

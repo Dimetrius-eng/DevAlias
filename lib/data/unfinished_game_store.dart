@@ -27,7 +27,7 @@ class SqliteUnfinishedGameStore implements UnfinishedGameStore {
   Future<Database> get _openDatabase async {
     return _database ??= openDatabase(
       path.join(await getDatabasesPath(), _databaseName),
-      version: 1,
+      version: 2,
       onCreate: (database, version) async {
         await database.execute('''
           CREATE TABLE $_tableName (
@@ -36,6 +36,13 @@ class SqliteUnfinishedGameStore implements UnfinishedGameStore {
             saved_at INTEGER NOT NULL
           )
         ''');
+      },
+      onUpgrade: (database, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // Version 1 did not retain every past turn, so it cannot recreate
+          // the deterministic C++ deck exactly. Discard that incomplete save.
+          await database.delete(_tableName, where: 'id = ?', whereArgs: [1]);
+        }
       },
     );
   }

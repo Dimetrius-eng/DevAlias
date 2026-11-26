@@ -48,6 +48,15 @@ void main() {
           outcome: WordOutcome.guessed,
         ),
       ],
+      completedRoundHistories: const [
+        [
+          RoundWordResult(
+            word: word,
+            teamName: 'Frontend',
+            outcome: WordOutcome.guessed,
+          ),
+        ],
+      ],
     );
 
     final restored = SavedGame.fromJson(savedGame.toJson());
@@ -62,5 +71,6 @@ void main() {
     expect(restored.isPaused, isTrue);
     expect(restored.gameHistory.single.word.term, 'Алгоритм');
     expect(restored.gameHistory.single.wasGuessed, isTrue);
+    expect(restored.completedRoundHistories.single.single.word.id, word.id);
   });
 }
