@@ -16,11 +16,13 @@ class GamePage extends StatefulWidget {
     required this.settings,
     required this.words,
     this.nativeCoreVersion,
+    this.initialGame,
   });
 
   final GameSettings settings;
   final List<GameWord> words;
   final int? nativeCoreVersion;
+  final SavedGame? initialGame;
 
   @override
   State<GamePage> createState() => _GamePageState();
@@ -39,6 +41,7 @@ class _GamePageState extends State<GamePage> {
   var _lastActionWasGuess = false;
   final _roundHistory = <RoundWordResult>[];
   final _gameHistory = <RoundWordResult>[];
+  final _completedRoundHistories = <List<RoundWordResult>>[];
   final _unfinishedGameStore = createUnfinishedGameStore();
   NativeGameSession? _nativeSession;
 
@@ -88,8 +91,13 @@ class _GamePageState extends State<GamePage> {
   @override
   void initState() {
     super.initState();
-    _secondsRemaining = widget.settings.roundDuration.inSeconds;
-    _createNativeSession();
+    final savedGame = widget.initialGame;
+    if (savedGame == null) {
+      _secondsRemaining = widget.settings.roundDuration.inSeconds;
+      _createNativeSession();
+    } else {
+      _restoreSavedGame(savedGame);
+    }
     _startTimer();
     _saveUnfinishedGame();
   }
@@ -116,6 +124,66 @@ class _GamePageState extends State<GamePage> {
 
     session?.dispose();
     _nativeSession = null;
+  }
+
+  void _restoreSavedGame(SavedGame savedGame) {
+    _currentWordIndex = widget.words.indexWhere(
+      (word) => word.id == savedGame.currentWordId,
+    );
+    if (_currentWordIndex < 0) {
+      _currentWordIndex = 0;
+    }
+    _roundIndex = savedGame.roundIndex;
+    _firstTeamScore = savedGame.firstTeamScore;
+    _secondTeamScore = savedGame.secondTeamScore;
+    _secondsRemaining = savedGame.secondsRemaining;
+    _isPaused = savedGame.isPaused;
+    _isRoundFinished = savedGame.isRoundFinished;
+    _roundHistory.addAll(savedGame.roundHistory);
+    _gameHistory.addAll(savedGame.gameHistory);
+    _completedRoundHistories.addAll(savedGame.completedRoundHistories);
+
+    final session = NativeGameCore.instance.createSession(
+      words: widget.words,
+      roundsPerTeam: widget.settings.roundCount,
+    );
+    if (session == null || !session.startTurn()) {
+      session?.dispose();
+      return;
+    }
+
+    for (final turnHistory in _completedRoundHistories) {
+      if (!_replayActions(session, turnHistory) ||
+          !session.finishTurn() ||
+          !session.startTurn()) {
+        session.dispose();
+        return;
+      }
+    }
+
+    if (!_replayActions(session, _roundHistory) ||
+        session.currentWordId != savedGame.currentWordId ||
+        session.scoreForTeam(0) != savedGame.firstTeamScore ||
+        session.scoreForTeam(1) != savedGame.secondTeamScore) {
+      session.dispose();
+      return;
+    }
+    _nativeSession = session;
+  }
+
+  bool _replayActions(
+    NativeGameSession session,
+    List<RoundWordResult> results,
+  ) {
+    for (final result in results) {
+      final accepted = result.wasGuessed
+          ? session.guessWord()
+          : session.skipWord();
+      if (!accepted) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _startTimer() {
@@ -160,6 +228,7 @@ class _GamePageState extends State<GamePage> {
     }
 
     setState(() {
+      _completedRoundHistories.add(List.unmodifiable(_roundHistory));
       if (nativeSession == null) {
         _roundIndex += 1;
       }
@@ -193,6 +262,7 @@ class _GamePageState extends State<GamePage> {
       _isGameFinished = false;
       _roundHistory.clear();
       _gameHistory.clear();
+      _completedRoundHistories.clear();
     });
     _startTimer();
     _nativeSession?.dispose();
@@ -258,6 +328,7 @@ class _GamePageState extends State<GamePage> {
       isRoundFinished: _isRoundFinished,
       roundHistory: _roundHistory,
       gameHistory: _gameHistory,
+      completedRoundHistories: _completedRoundHistories,
     );
     unawaited(_saveSnapshot(snapshot));
   }
