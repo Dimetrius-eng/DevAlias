@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'data/unfinished_game_store.dart';
 import 'domain/saved_game.dart';
 import 'screens/game_page.dart';
+import 'screens/game_history_page.dart';
 import 'screens/game_setup_page.dart';
 import 'screens/how_to_play_page.dart';
 import 'theme/app_theme.dart';
@@ -126,6 +127,13 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
                       label: const Text('Продовжити гру'),
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _openPage(context, const GameHistoryPage()),
+                    icon: const Icon(Icons.history_rounded),
+                    label: const Text('Історія ігор'),
+                  ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () => _openPage(context, const HowToPlayPage()),

@@ -21,6 +21,7 @@ void main() {
 
     expect(find.text('DevAlias'), findsOneWidget);
     expect(find.text('Нова гра'), findsOneWidget);
+    expect(find.text('Історія ігор'), findsOneWidget);
     expect(find.text('Як грати'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
     expect(
@@ -337,5 +338,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Правила DevAlias'), findsOneWidget);
+  });
+
+  testWidgets('Game history opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Історія ігор'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Історія ігор'), findsOneWidget);
+    expect(
+      find.textContaining('Тут з’являться завершені партії'),
+      findsOneWidget,
+    );
   });
 }

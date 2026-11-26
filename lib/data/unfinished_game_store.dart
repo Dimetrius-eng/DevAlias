@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io' show Platform;
 
-import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/saved_game.dart';
+import 'game_database.dart';
 
 abstract interface class UnfinishedGameStore {
   Future<void> save(SavedGame game);
@@ -19,38 +19,13 @@ UnfinishedGameStore createUnfinishedGameStore() {
 }
 
 class SqliteUnfinishedGameStore implements UnfinishedGameStore {
-  static const _databaseName = 'devalias.db';
   static const _tableName = 'unfinished_game';
-  Future<Database>? _database;
   Future<void> _writeQueue = Future.value();
-
-  Future<Database> get _openDatabase async {
-    return _database ??= openDatabase(
-      path.join(await getDatabasesPath(), _databaseName),
-      version: 2,
-      onCreate: (database, version) async {
-        await database.execute('''
-          CREATE TABLE $_tableName (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            payload TEXT NOT NULL,
-            saved_at INTEGER NOT NULL
-          )
-        ''');
-      },
-      onUpgrade: (database, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          // Version 1 did not retain every past turn, so it cannot recreate
-          // the deterministic C++ deck exactly. Discard that incomplete save.
-          await database.delete(_tableName, where: 'id = ?', whereArgs: [1]);
-        }
-      },
-    );
-  }
 
   @override
   Future<void> save(SavedGame game) {
     return _enqueue(() async {
-      final database = await _openDatabase;
+      final database = await GameDatabase.instance;
       await database.insert(_tableName, {
         'id': 1,
         'payload': jsonEncode(game.toJson()),
@@ -61,7 +36,7 @@ class SqliteUnfinishedGameStore implements UnfinishedGameStore {
 
   @override
   Future<SavedGame?> load() async {
-    final database = await _openDatabase;
+    final database = await GameDatabase.instance;
     final rows = await database.query(
       _tableName,
       where: 'id = ?',
@@ -86,7 +61,7 @@ class SqliteUnfinishedGameStore implements UnfinishedGameStore {
   @override
   Future<void> delete() {
     return _enqueue(() async {
-      final database = await _openDatabase;
+      final database = await GameDatabase.instance;
       await database.delete(_tableName, where: 'id = ?', whereArgs: [1]);
     });
   }
