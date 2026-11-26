@@ -23,6 +23,7 @@ void main() {
     expect(find.text('Нова гра'), findsOneWidget);
     expect(find.text('Історія ігор'), findsOneWidget);
     expect(find.text('Статистика'), findsOneWidget);
+    expect(find.text('Мій профіль'), findsOneWidget);
     expect(find.text('Як грати'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
     expect(
@@ -368,5 +369,19 @@ void main() {
 
     expect(find.text('Ваш прогрес'), findsOneWidget);
     expect(find.text('Досягнення'), findsOneWidget);
+  });
+
+  testWidgets('Local profile opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Мій профіль'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Мій профіль'), findsOneWidget);
+    expect(find.text('Оберіть аватар'), findsOneWidget);
+    expect(find.text('Зберегти профіль'), findsOneWidget);
   });
 }
