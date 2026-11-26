@@ -1,0 +1,1 @@
+"""DevAlias FastAPI application package."""

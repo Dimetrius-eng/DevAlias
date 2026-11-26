@@ -1,30 +1,388 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:devalias/domain/difficulty.dart';
+import 'package:devalias/domain/game_settings.dart';
+import 'package:devalias/domain/game_word.dart';
+import 'package:devalias/domain/round_word_result.dart';
+import 'package:devalias/domain/saved_game.dart';
+import 'package:devalias/domain/team.dart';
+import 'package:devalias/domain/word_category.dart';
 import 'package:devalias/main.dart';
+import 'package:devalias/screens/game_page.dart';
+import 'package:devalias/theme/app_theme.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('DevAlias start screen displays its menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('DevAlias'), findsOneWidget);
+    expect(find.text('Нова гра'), findsOneWidget);
+    expect(find.text('Історія ігор'), findsOneWidget);
+    expect(find.text('Статистика'), findsOneWidget);
+    expect(find.text('Мій профіль'), findsOneWidget);
+    expect(find.text('Працює без інтернету'), findsOneWidget);
+    expect(find.text('Як грати'), findsOneWidget);
+    expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
+    expect(
+      tester
+          .widget<MaterialApp>(find.byType(MaterialApp))
+          .theme
+          ?.colorScheme
+          .primary,
+      AppTheme.primary,
+    );
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('New game page lets a player choose round duration', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Нова гра'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Налаштування гри'), findsOneWidget);
+
+    await tester.tap(find.text('90 с'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final durationSelector = find
+        .byWidgetPredicate((widget) => widget is SegmentedButton<int>)
+        .first;
+    expect(tester.widget<SegmentedButton<int>>(durationSelector).selected, {
+      90,
+    });
+  });
+
+  testWidgets('Game controls advance cards and count guessed terms', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Нова гра'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -1200));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Почати гру'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Раунд 1 із 3'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+    expect(find.text('Алгоритм'), findsOneWidget);
+    expect(find.text('Команда 1: 0  •  Команда 2: 0'), findsOneWidget);
+    expect(find.byKey(const ValueKey('word-transition')), findsOneWidget);
+
+    await tester.tap(find.text('Вгадано'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
+    expect(find.text('Компілятор'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(const ValueKey('game-card')),
+      const Offset(-500, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
+    expect(find.text('Репозиторій'), findsOneWidget);
+
+    await tester.fling(
+      find.byKey(const ValueKey('game-card')),
+      const Offset(500, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Команда 1: 2  •  Команда 2: 0'), findsOneWidget);
+    expect(find.text('Алгоритм'), findsOneWidget);
+  });
+
+  testWidgets('Round timer pauses and finishes with the last word', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 2),
+      roundCount: 1,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'test-word',
+        term: 'Тестовий термін',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Пауза'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('Гра на паузі'), findsOneWidget);
+    expect(find.text('00:02'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Продовжити'));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('Час вийшов'), findsOneWidget);
+    expect(find.text('Останній термін: Тестовий термін'), findsOneWidget);
+  });
+
+  testWidgets('Saved game restores the exact visible turn state', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Frontend'),
+      secondTeam: const Team(name: 'Backend'),
+      roundDuration: const Duration(seconds: 60),
+      roundCount: 2,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'first-word',
+        term: 'Алгоритм',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+      GameWord(
+        id: 'second-word',
+        term: 'Контейнер',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+    final savedGame = SavedGame(
+      settings: settings,
+      words: words,
+      currentWordId: 'second-word',
+      roundIndex: 1,
+      firstTeamScore: 1,
+      secondTeamScore: 0,
+      secondsRemaining: 37,
+      isPaused: true,
+      isRoundFinished: false,
+      roundHistory: const [],
+      gameHistory: [
+        RoundWordResult(
+          word: words[0],
+          teamName: 'Frontend',
+          outcome: WordOutcome.guessed,
+        ),
+      ],
+      completedRoundHistories: [
+        [
+          RoundWordResult(
+            word: words[0],
+            teamName: 'Frontend',
+            outcome: WordOutcome.guessed,
+          ),
+        ],
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(
+          settings: settings,
+          words: words,
+          initialGame: savedGame,
+        ),
+      ),
+    );
+
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
+    expect(find.text('Backend пояснює'), findsOneWidget);
+    expect(find.text('Frontend: 1  •  Backend: 0'), findsOneWidget);
+    expect(find.text('00:37'), findsOneWidget);
+    expect(find.text('Гра на паузі'), findsOneWidget);
+    expect(find.text('Контейнер'), findsOneWidget);
+  });
+
+  testWidgets('Round summary shows guessed and skipped word history', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 3),
+      roundCount: 1,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'first-word',
+        term: 'Перше слово',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+      GameWord(
+        id: 'second-word',
+        term: 'Друге слово',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+    await tester.tap(find.text('Вгадано'));
+    await tester.pump();
+    await tester.tap(find.text('Пропущено'));
+    await tester.pump(const Duration(seconds: 3));
+
+    expect(find.text('Підсумок раунду'), findsOneWidget);
+    expect(find.text('У раунді: +1 бал'), findsOneWidget);
+    expect(find.text('Вгадані (1)'), findsOneWidget);
+    expect(find.text('Пропущені (1)'), findsOneWidget);
+    expect(find.text('Перше слово'), findsOneWidget);
+    expect(find.text('Друге слово'), findsOneWidget);
+  });
+
+  testWidgets('Each team plays every selected round before the game ends', (
+    WidgetTester tester,
+  ) async {
+    final settings = GameSettings(
+      firstTeam: const Team(name: 'Команда 1'),
+      secondTeam: const Team(name: 'Команда 2'),
+      roundDuration: const Duration(seconds: 1),
+      roundCount: 2,
+      difficulty: Difficulty.medium,
+      categories: {WordCategory.generalIt},
+    );
+    const words = [
+      GameWord(
+        id: 'test-word',
+        term: 'Тестовий термін',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GamePage(settings: settings, words: words),
+      ),
+    );
+    await tester.tap(find.text('Вгадано'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
+    expect(find.text('Команда 2 пояснює'), findsOneWidget);
+    expect(find.text('Команда 1: 1  •  Команда 2: 0'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Наступний раунд'));
+    await tester.pump();
+
+    expect(find.text('Раунд 2 із 2'), findsOneWidget);
+    expect(find.text('Команда 2 пояснює'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.text('Показати підсумок партії'));
+    await tester.pump();
+
+    expect(find.text('Партію завершено'), findsOneWidget);
+    expect(find.text('Команда 1 перемагає'), findsOneWidget);
+    expect(find.text('Історія слів'), findsOneWidget);
+    expect(find.text('Тестовий термін — Команда 1'), findsOneWidget);
+
+    final replayButton = find.text('Зіграти ще раз');
+    await tester.ensureVisible(replayButton);
+    await tester.tap(replayButton);
+    await tester.pump();
+
+    expect(find.text('Раунд 1 із 2'), findsOneWidget);
+    expect(find.text('Команда 1 пояснює'), findsOneWidget);
+    expect(find.text('Команда 1: 0  •  Команда 2: 0'), findsOneWidget);
+    expect(find.text('00:01'), findsOneWidget);
+  });
+
+  testWidgets('How to play button opens the rules page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Як грати'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Правила DevAlias'), findsOneWidget);
+  });
+
+  testWidgets('Game history opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Історія ігор'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Історія ігор'), findsOneWidget);
+    expect(
+      find.textContaining('Тут з’являться завершені партії'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Statistics opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Статистика'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ваш прогрес'), findsOneWidget);
+    expect(find.text('Досягнення'), findsOneWidget);
+  });
+
+  testWidgets('Local profile opens from the start screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const DevAliasApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Мій профіль'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Мій профіль'), findsOneWidget);
+    expect(find.text('Оберіть аватар'), findsOneWidget);
+    expect(find.text('Зберегти профіль'), findsOneWidget);
   });
 }
