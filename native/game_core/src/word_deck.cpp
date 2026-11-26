@@ -18,8 +18,8 @@ WordDeck::WordDeck(std::vector<Word> words, const GameSettings& settings,
     }
   }
 
-  std::mt19937 random_engine(shuffle_seed);
-  std::shuffle(words_.begin(), words_.end(), random_engine);
+  random_engine_.seed(shuffle_seed);
+  std::shuffle(words_.begin(), words_.end(), random_engine_);
 }
 
 const Word* WordDeck::Next() {
@@ -27,6 +27,17 @@ const Word* WordDeck::Next() {
     return nullptr;
   }
 
+  if (next_index_ == words_.size()) {
+    std::shuffle(words_.begin(), words_.end(), random_engine_);
+    if (words_.size() > 1 && has_last_word_ &&
+        words_.front().id == last_word_id_) {
+      std::swap(words_.front(), words_.back());
+    }
+    next_index_ = 0;
+  }
+
+  last_word_id_ = words_[next_index_].id;
+  has_last_word_ = true;
   return &words_[next_index_++];
 }
 
@@ -35,7 +46,7 @@ std::size_t WordDeck::RemainingCount() const {
 }
 
 bool WordDeck::IsEmpty() const {
-  return next_index_ == words_.size();
+  return words_.empty();
 }
 
 }  // namespace devalias
