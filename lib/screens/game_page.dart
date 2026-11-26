@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../data/completed_game_store.dart';
 import '../data/unfinished_game_store.dart';
+import '../domain/completed_game.dart';
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
 import '../domain/round_word_result.dart';
@@ -43,6 +45,7 @@ class _GamePageState extends State<GamePage> {
   final _gameHistory = <RoundWordResult>[];
   final _completedRoundHistories = <List<RoundWordResult>>[];
   final _unfinishedGameStore = createUnfinishedGameStore();
+  final _completedGameStore = createCompletedGameStore();
   NativeGameSession? _nativeSession;
 
   GameWord get _currentWord {
@@ -247,7 +250,25 @@ class _GamePageState extends State<GamePage> {
       nativeSession.finishTurn();
     }
     setState(() => _isGameFinished = true);
+    unawaited(_saveCompletedGame());
     unawaited(_unfinishedGameStore.delete());
+  }
+
+  Future<void> _saveCompletedGame() async {
+    try {
+      await _completedGameStore.save(
+        CompletedGame(
+          completedAt: DateTime.now(),
+          firstTeamName: widget.settings.firstTeam.name,
+          secondTeamName: widget.settings.secondTeam.name,
+          firstTeamScore: _firstTeamDisplayedScore,
+          secondTeamScore: _secondTeamDisplayedScore,
+          history: _gameHistory,
+        ),
+      );
+    } on Object {
+      // A completed party remains visible even if history storage fails.
+    }
   }
 
   void _restartGame() {
