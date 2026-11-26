@@ -9,7 +9,7 @@ class GameDatabase {
   GameDatabase._();
 
   static const _databaseName = 'devalias.db';
-  static const version = 3;
+  static const version = 4;
   static Future<Database>? _database;
 
   static Future<Database> get instance async {
@@ -19,6 +19,7 @@ class GameDatabase {
       onCreate: (database, _) async {
         await _createUnfinishedGameTable(database);
         await _createCompletedGameTable(database);
+        await _createLocalProfileTable(database);
       },
       onUpgrade: (database, oldVersion, _) async {
         if (oldVersion < 2) {
@@ -31,6 +32,9 @@ class GameDatabase {
         }
         if (oldVersion < 3) {
           await _createCompletedGameTable(database);
+        }
+        if (oldVersion < 4) {
+          await _createLocalProfileTable(database);
         }
       },
     );
@@ -52,6 +56,18 @@ class GameDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         payload TEXT NOT NULL,
         completed_at INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _createLocalProfileTable(DatabaseExecutor database) {
+    return database.execute('''
+      CREATE TABLE local_profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        display_name TEXT NOT NULL,
+        avatar_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
       )
     ''');
   }

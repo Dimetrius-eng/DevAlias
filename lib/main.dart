@@ -6,6 +6,7 @@ import 'screens/game_page.dart';
 import 'screens/game_history_page.dart';
 import 'screens/game_setup_page.dart';
 import 'screens/how_to_play_page.dart';
+import 'screens/profile_page.dart';
 import 'screens/statistics_page.dart';
 import 'theme/app_theme.dart';
 
@@ -128,6 +129,12 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
                       label: const Text('Продовжити гру'),
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _openPage(context, const ProfilePage()),
+                    icon: const Icon(Icons.person_rounded),
+                    label: const Text('Мій профіль'),
+                  ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () =>
