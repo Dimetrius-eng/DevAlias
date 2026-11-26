@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../data/unfinished_game_store.dart';
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
 import '../domain/round_word_result.dart';
+import '../domain/saved_game.dart';
 import '../platform/game_feedback.dart';
 import '../platform/native_game_core.dart';
 
@@ -37,6 +39,7 @@ class _GamePageState extends State<GamePage> {
   var _lastActionWasGuess = false;
   final _roundHistory = <RoundWordResult>[];
   final _gameHistory = <RoundWordResult>[];
+  final _unfinishedGameStore = createUnfinishedGameStore();
   NativeGameSession? _nativeSession;
 
   GameWord get _currentWord {
@@ -55,6 +58,10 @@ class _GamePageState extends State<GamePage> {
       (_nativeSession == null && _roundIndex.isEven);
   int get _teamRoundNumber =>
       _nativeSession?.currentRound ?? _roundIndex ~/ 2 + 1;
+  int get _savedRoundIndex => _nativeSession == null
+      ? _roundIndex
+      : (_nativeSession!.currentRound - 1) * 2 +
+            _nativeSession!.currentTeamIndex;
   int get _totalTurnCount => widget.settings.roundCount * 2;
   bool get _isFinalRound => _nativeSession != null
       ? _nativeSession!.currentRound == widget.settings.roundCount &&
@@ -84,11 +91,15 @@ class _GamePageState extends State<GamePage> {
     _secondsRemaining = widget.settings.roundDuration.inSeconds;
     _createNativeSession();
     _startTimer();
+    _saveUnfinishedGame();
   }
 
   @override
   void dispose() {
     _roundTimer?.cancel();
+    if (!_isGameFinished) {
+      _saveUnfinishedGame();
+    }
     _nativeSession?.dispose();
     super.dispose();
   }
@@ -124,10 +135,12 @@ class _GamePageState extends State<GamePage> {
       });
       unawaited(GameFeedback.roundFinished());
       timer.cancel();
+      _saveUnfinishedGame();
       return;
     }
 
     setState(() => _secondsRemaining -= 1);
+    _saveUnfinishedGame();
   }
 
   void _togglePause() {
@@ -136,6 +149,7 @@ class _GamePageState extends State<GamePage> {
     }
 
     setState(() => _isPaused = !_isPaused);
+    _saveUnfinishedGame();
   }
 
   void _startNextRound() {
@@ -155,6 +169,7 @@ class _GamePageState extends State<GamePage> {
       _roundHistory.clear();
     });
     _startTimer();
+    _saveUnfinishedGame();
   }
 
   void _showGameResult() {
@@ -163,6 +178,7 @@ class _GamePageState extends State<GamePage> {
       nativeSession.finishTurn();
     }
     setState(() => _isGameFinished = true);
+    unawaited(_unfinishedGameStore.delete());
   }
 
   void _restartGame() {
@@ -181,6 +197,7 @@ class _GamePageState extends State<GamePage> {
     _startTimer();
     _nativeSession?.dispose();
     _createNativeSession();
+    _saveUnfinishedGame();
   }
 
   void _handleCard({required bool isGuessed}) {
@@ -221,6 +238,36 @@ class _GamePageState extends State<GamePage> {
         _currentWordIndex = (_currentWordIndex + 1) % widget.words.length;
       }
     });
+    _saveUnfinishedGame();
+  }
+
+  void _saveUnfinishedGame() {
+    if (_isGameFinished) {
+      return;
+    }
+
+    final snapshot = SavedGame(
+      settings: widget.settings,
+      words: widget.words,
+      currentWordId: _currentWord.id,
+      roundIndex: _savedRoundIndex,
+      firstTeamScore: _firstTeamDisplayedScore,
+      secondTeamScore: _secondTeamDisplayedScore,
+      secondsRemaining: _secondsRemaining,
+      isPaused: _isPaused,
+      isRoundFinished: _isRoundFinished,
+      roundHistory: _roundHistory,
+      gameHistory: _gameHistory,
+    );
+    unawaited(_saveSnapshot(snapshot));
+  }
+
+  Future<void> _saveSnapshot(SavedGame snapshot) async {
+    try {
+      await _unfinishedGameStore.save(snapshot);
+    } on Object {
+      // A game remains playable if local storage is temporarily unavailable.
+    }
   }
 
   @override
