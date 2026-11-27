@@ -10,6 +10,7 @@ import 'package:devalias/domain/team.dart';
 import 'package:devalias/domain/word_category.dart';
 import 'package:devalias/main.dart';
 import 'package:devalias/screens/game_page.dart';
+import 'package:devalias/screens/server_dictionary_page.dart';
 import 'package:devalias/theme/app_theme.dart';
 
 void main() {
@@ -24,6 +25,7 @@ void main() {
     expect(find.text('Історія ігор'), findsOneWidget);
     expect(find.text('Статистика'), findsOneWidget);
     expect(find.text('Мій профіль'), findsOneWidget);
+    expect(find.text('Серверний словник'), findsOneWidget);
     expect(find.text('Працює без інтернету'), findsOneWidget);
     expect(find.text('Як грати'), findsOneWidget);
     expect(find.byIcon(Icons.terminal_rounded), findsOneWidget);
@@ -337,7 +339,9 @@ void main() {
     await tester.pumpWidget(const DevAliasApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Як грати'));
+    final rulesButton = find.text('Як грати');
+    await tester.ensureVisible(rulesButton);
+    await tester.tap(rulesButton);
     await tester.pumpAndSettle();
 
     expect(find.text('Правила DevAlias'), findsOneWidget);
@@ -370,6 +374,16 @@ void main() {
 
     expect(find.text('Ваш прогрес'), findsOneWidget);
     expect(find.text('Досягнення'), findsOneWidget);
+  });
+
+  testWidgets('Server dictionary page explains setup without an API address', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MaterialApp(home: ServerDictionaryPage()));
+
+    expect(find.text('Серверний словник'), findsOneWidget);
+    expect(find.textContaining('Адресу API ще не задано'), findsOneWidget);
+    expect(find.textContaining('DEVALIAS_API_BASE_URL'), findsOneWidget);
   });
 
   testWidgets('Local profile opens from the start screen', (
