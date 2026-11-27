@@ -67,3 +67,22 @@ docker-compose exec postgres psql -U devalias -d devalias -c "SELECT * FROM cate
 ```powershell
 docker-compose stop
 ```
+
+## Імпорт офлайн-словника до PostgreSQL
+
+Урок 27 переносить ті самі слова, які Android MVP бере з
+`assets/data/words_uk.json`. Увімкніть контейнер PostgreSQL, активуйте Python
+середовище та запустіть імпорт із папки `server`:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m scripts.import_words
+```
+
+Імпорт використовує `source_id` з JSON і працює без дублікатів: повторний
+запуск оновить термін, складність і його категорію. Перевірити результат:
+
+```powershell
+docker-compose exec postgres psql -U devalias -d devalias -c "SELECT difficulty, COUNT(*) FROM words GROUP BY difficulty ORDER BY difficulty;"
+```
