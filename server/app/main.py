@@ -11,6 +11,7 @@ from app.dictionary_repository import (
     create_word,
     get_word,
     list_categories,
+    list_published_words,
     list_words_for_moderation,
     random_word,
     set_word_approval,
@@ -147,6 +148,14 @@ def read_random_word(
     if word is None:
         raise HTTPException(status_code=404, detail="No word matches these filters.")
     return WordResponse(**word)
+
+
+@app.get("/words", response_model=list[WordResponse], tags=["dictionary"])
+def read_dictionary_words() -> list[WordResponse]:
+    """Return the complete approved dictionary for an offline client cache."""
+    with open_database() as connection:
+        words = list_published_words(connection)
+    return [WordResponse(**word) for word in words]
 
 
 @app.post(

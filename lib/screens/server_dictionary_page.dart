@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/dictionary_cache.dart';
+import '../data/dictionary_sync_service.dart';
 import '../data/remote_dictionary_api.dart';
 import '../domain/game_word.dart';
 
@@ -18,6 +20,8 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
   String? _error;
   List<RemoteCategory>? _categories;
   GameWord? _randomWord;
+  DictionaryCacheInfo? _cacheInfo;
+  final _cache = const SqliteDictionaryCache();
 
   @override
   void initState() {
@@ -27,6 +31,18 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
     } on FormatException catch (error) {
       _api = null;
       _error = error.message;
+    }
+    _loadCacheInfo();
+  }
+
+  Future<void> _loadCacheInfo() async {
+    try {
+      final cacheInfo = await _cache.readInfo();
+      if (mounted) {
+        setState(() => _cacheInfo = cacheInfo);
+      }
+    } on Object {
+      // The setup guide still works in widget tests and unsupported platforms.
     }
   }
 
@@ -88,6 +104,39 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
     }
   }
 
+  Future<void> _synchronizeCache() async {
+    final api = _api;
+    if (api == null) {
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final result = await DictionarySyncService(
+        remoteSource: api,
+        cache: _cache,
+      ).synchronize();
+      await _loadCacheInfo();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Збережено ${result.wordCount} слів для офлайн-гри.'),
+          ),
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() => _error = 'Не вдалося синхронізувати словник: $error');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final api = _api;
@@ -106,7 +155,20 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
               const _ApiSetupGuide()
             else ...[
               Text('Адреса: ${api.baseUri}'),
+              const SizedBox(height: 8),
+              Text(
+                _cacheInfo == null
+                    ? 'Локальний кеш ще не створено.'
+                    : 'У кеші: ${_cacheInfo!.wordCount} слів. '
+                          'Оновлено: ${_formatDate(_cacheInfo!.synchronizedAt)}.',
+              ),
               const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _isLoading ? null : _synchronizeCache,
+                icon: const Icon(Icons.download_for_offline_rounded),
+                label: const Text('Синхронізувати для офлайн-гри'),
+              ),
+              const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _isLoading ? null : _loadCategories,
                 icon: const Icon(Icons.category_rounded),
@@ -175,6 +237,13 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
       ),
     );
   }
+
+  String _formatDate(DateTime value) {
+    final local = value.toLocal();
+    String part(int number) => number.toString().padLeft(2, '0');
+    return '${part(local.day)}.${part(local.month)}.${local.year} '
+        '${part(local.hour)}:${part(local.minute)}';
+  }
 }
 
 class _ApiSetupGuide extends StatelessWidget {
@@ -187,7 +256,7 @@ class _ApiSetupGuide extends StatelessWidget {
       'а Flutter — з параметром:\n\n'
       'flutter run --dart-define=DEVALIAS_API_BASE_URL=http://192.168.x.x:8000\n\n'
       'На телефоні використовуйте локальну IP-адресу ПК у вашій Wi-Fi мережі, '
-      'а не localhost. Повна синхронізація словника в офлайн-кеш буде в Уроці 31.',
+      'а не localhost. Після синхронізації слова збережуться для офлайн-гри.',
     );
   }
 }

@@ -72,4 +72,28 @@ void main() {
 
     expect(api.fetchCategories(), throwsA(isA<RemoteDictionaryException>()));
   });
+
+  test('remote API reads the complete published dictionary for sync', () async {
+    final client = MockClient((request) async {
+      expect(request.url.toString(), 'http://localhost:8000/words');
+      return http.Response.bytes(
+        utf8.encode(
+          '[{"source_id":"easy-general-1","term":"Алгоритм",'
+          '"difficulty":"easy","categories":["general_it"]}]',
+        ),
+        200,
+        headers: const {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+    final api = RemoteDictionaryApi(
+      baseUri: Uri.parse('http://localhost:8000'),
+      client: client,
+    );
+
+    final words = await api.fetchDictionary();
+
+    expect(words.single.id, 'easy-general-1');
+    expect(words.single.term, 'Алгоритм');
+    expect(words.single.difficulty, Difficulty.easy);
+  });
 }

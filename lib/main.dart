@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'data/unfinished_game_store.dart';
+import 'data/dictionary_cache.dart';
+import 'data/dictionary_sync_service.dart';
+import 'data/remote_dictionary_api.dart';
 import 'domain/saved_game.dart';
 import 'screens/game_page.dart';
 import 'screens/game_history_page.dart';
@@ -44,6 +47,29 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
   void initState() {
     super.initState();
     _loadSavedGame();
+    _synchronizeDictionaryInBackground();
+  }
+
+  Future<void> _synchronizeDictionaryInBackground() async {
+    RemoteDictionaryApi? api;
+    try {
+      api = RemoteDictionaryApi.fromEnvironment();
+    } on FormatException {
+      return;
+    }
+    if (api == null) {
+      return;
+    }
+    try {
+      await DictionarySyncService(
+        remoteSource: api,
+        cache: const SqliteDictionaryCache(),
+      ).synchronize();
+    } on Object {
+      // A missing server or network must never prevent the offline game.
+    } finally {
+      api.close();
+    }
   }
 
   Future<void> _loadSavedGame() async {

@@ -61,3 +61,24 @@ def test_random_word_rejects_an_unknown_category(monkeypatch: pytest.MonkeyPatch
         api.read_random_word(None, "missing")
 
     assert error.value.status_code == 404
+
+
+def test_dictionary_sync_returns_only_repository_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(api, "open_database", _fake_database)
+    monkeypatch.setattr(
+        api,
+        "list_published_words",
+        lambda connection: [
+            {
+                "source_id": "easy-general-1",
+                "term": "Алгоритм",
+                "difficulty": "easy",
+                "categories": ["general_it"],
+            }
+        ],
+    )
+
+    words = api.read_dictionary_words()
+
+    assert len(words) == 1
+    assert words[0].source_id == "easy-general-1"
