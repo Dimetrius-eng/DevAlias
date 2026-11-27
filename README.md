@@ -1,17 +1,32 @@
-# devalias
+# DevAlias
 
-A team-based IT terminology party game.
+DevAlias — дипломний командний Alias для IT-термінів. Android є першим MVP,
+Flutter UI та доменна логіка залишаються платформонезалежними, а правила гри
+мають portable C++-ядро через CMake та FFI.
 
-## Getting Started
+## Частини проєкту
 
-This project is a starting point for a Flutter application.
+- `lib/` — Flutter-застосунок: локальна гра, SQLite, історія, статистика та
+  локальний профіль;
+- `native/game_core/` — C++-ядро гри;
+- `assets/data/words_uk.json` — офлайн-словник Android MVP;
+- `server/` — майбутній FastAPI-сервер і PostgreSQL для серверного словника.
 
-A few resources to get you started if this is your first Flutter project:
+## Android MVP офлайн
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Застосунок працює без мережі: словник і звуки входять до APK, а незавершені
+партії, історія, статистика й профіль зберігаються локально.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter analyze
+flutter test
+flutter run
+```
+
+Ручний сценарій перевірки є в
+[docs/android_mvp_offline_checklist.md](docs/android_mvp_offline_checklist.md).
+
+## Серверна частина
+
+Починаючи з Уроку 25, сервер розміщений у `server/`. Детальні інструкції
+FastAPI, Docker і PostgreSQL дивіться у [server/README.md](server/README.md).

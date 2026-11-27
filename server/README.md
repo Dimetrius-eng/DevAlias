@@ -33,3 +33,37 @@ uvicorn app.main:app --reload
 ```powershell
 python -m pytest
 ```
+
+## Локальна PostgreSQL у Docker
+
+Урок 26 додає PostgreSQL для серверного словника. У папці `server` виконайте:
+
+```powershell
+Copy-Item .env.example .env
+docker-compose up -d
+docker-compose ps
+```
+
+Docker створить контейнер `devalias-postgres` і том `devalias_postgres_data`.
+Том зберігає дані між перезапусками контейнера. Скрипти в `db/init/` виконаються
+лише під час першого створення порожнього тому.
+
+Схема має три таблиці:
+
+- `categories` — категорії словника;
+- `words` — IT-терміни; `source_id` збереже ідентифікатор зі старого JSON;
+- `word_categories` — зв’язок «слово → категорія». Він робить модель гнучкою,
+  якщо одне слово згодом належатиме кільком категоріям.
+
+Перевірити таблиці можна так:
+
+```powershell
+docker-compose exec postgres psql -U devalias -d devalias -c "\dt"
+docker-compose exec postgres psql -U devalias -d devalias -c "SELECT * FROM categories;"
+```
+
+Зупинити контейнер без видалення даних:
+
+```powershell
+docker-compose stop
+```
