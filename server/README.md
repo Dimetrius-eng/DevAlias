@@ -35,6 +35,15 @@ uvicorn app.main:app --reload
 - `GET /words/random?difficulty=hard&category=databases` — випадкове слово
   із фільтрами. Допустимі складності: `easy`, `medium`, `hard`.
 
+Урок 29 додає локальні moderation-маршрути. До Уроку 33 вони не мають
+авторизації, тому використовуються лише під час розробки на вашому комп’ютері:
+
+- `POST /words` — створює слово як `is_approved: false`;
+- `PATCH /words/{source_id}` — редагує термін, складність або категорії;
+- `GET /moderation/words` — показує очікуючі слова;
+- `PATCH /words/{source_id}/moderation` з `{ "approved": true }` — схвалює
+  слово для публічного `GET /words/random`.
+
 ## Тести
 
 ```powershell
