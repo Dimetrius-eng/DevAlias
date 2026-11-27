@@ -8,6 +8,7 @@ import 'screens/game_setup_page.dart';
 import 'screens/how_to_play_page.dart';
 import 'screens/profile_page.dart';
 import 'screens/statistics_page.dart';
+import 'screens/server_dictionary_page.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -161,6 +162,13 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
                   onPressed: () => _openPage(context, const StatisticsPage()),
                   icon: const Icon(Icons.insights_rounded),
                   label: const Text('Статистика'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      _openPage(context, const ServerDictionaryPage()),
+                  icon: const Icon(Icons.cloud_sync_rounded),
+                  label: const Text('Серверний словник'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
