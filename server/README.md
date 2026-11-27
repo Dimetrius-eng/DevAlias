@@ -28,6 +28,13 @@ uvicorn app.main:app --reload
 - `http://127.0.0.1:8000/health` — перевірка стану;
 - `http://127.0.0.1:8000/docs` — інтерактивна документація FastAPI.
 
+Після Уроку 28 за запущеної PostgreSQL також доступні:
+
+- `GET /categories` — категорії та кількість доступних слів;
+- `GET /words/random` — одне випадкове слово;
+- `GET /words/random?difficulty=hard&category=databases` — випадкове слово
+  із фільтрами. Допустимі складності: `easy`, `medium`, `hard`.
+
 ## Тести
 
 ```powershell
