@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../data/asset_word_repository.dart';
+import '../data/dictionary_cache.dart';
+import '../data/dictionary_sync_service.dart';
 import '../domain/difficulty.dart';
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
@@ -17,7 +18,9 @@ class GameSetupPage extends StatefulWidget {
 }
 
 class _GameSetupPageState extends State<GameSetupPage> {
-  final _wordRepository = const AssetWordRepository();
+  final _wordRepository = const OfflineFirstWordRepository(
+    cache: SqliteDictionaryCache(),
+  );
   String _firstTeamName = 'Команда 1';
   String _secondTeamName = 'Команда 2';
   int _roundDurationSeconds = 60;

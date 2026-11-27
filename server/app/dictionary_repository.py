@@ -78,6 +78,27 @@ def random_word(
         return cursor.fetchone()
 
 
+def list_published_words(connection: psycopg.Connection[Any]) -> list[dict[str, Any]]:
+    """Return the complete approved dictionary in a stable order for sync clients."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT
+                words.source_id,
+                words.term,
+                words.difficulty,
+                ARRAY_AGG(categories.slug ORDER BY categories.slug) AS categories
+            FROM words
+            JOIN word_categories ON word_categories.word_id = words.id
+            JOIN categories ON categories.id = word_categories.category_id
+            WHERE words.is_approved = TRUE
+            GROUP BY words.id
+            ORDER BY words.source_id
+            """
+        )
+        return list(cursor.fetchall())
+
+
 def get_word(connection: psycopg.Connection[Any], source_id: str) -> dict[str, Any] | None:
     with connection.cursor() as cursor:
         cursor.execute(

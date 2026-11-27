@@ -41,7 +41,11 @@ class RemoteDictionaryException implements Exception {
   String toString() => message;
 }
 
-class RemoteDictionaryApi {
+abstract class DictionaryRemoteSource {
+  Future<List<GameWord>> fetchDictionary();
+}
+
+class RemoteDictionaryApi implements DictionaryRemoteSource {
   RemoteDictionaryApi({required this.baseUri, http.Client? client})
     : _client = client ?? http.Client(),
       _ownsClient = client == null;
@@ -87,7 +91,22 @@ class RemoteDictionaryApi {
       _endpoint('words/random', queryParameters: queryParameters),
     );
     _ensureSuccess(response);
-    final json = _jsonObject(jsonDecode(response.body));
+    return _gameWordFromJson(jsonDecode(response.body));
+  }
+
+  @override
+  Future<List<GameWord>> fetchDictionary() async {
+    final response = await _client.get(_endpoint('words'));
+    _ensureSuccess(response);
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw const FormatException('API returned an invalid dictionary list.');
+    }
+    return decoded.map(_gameWordFromJson).toList(growable: false);
+  }
+
+  GameWord _gameWordFromJson(Object? value) {
+    final json = _jsonObject(value);
     final sourceId = json['source_id'];
     final term = json['term'];
     final apiDifficulty = json['difficulty'];
