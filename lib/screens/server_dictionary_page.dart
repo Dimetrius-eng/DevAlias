@@ -128,7 +128,11 @@ class _ServerDictionaryPageState extends State<ServerDictionaryPage> {
       }
     } on Object catch (error) {
       if (mounted) {
-        setState(() => _error = 'Не вдалося синхронізувати словник: $error');
+        setState(
+          () => _error =
+              'Не вдалося синхронізувати словник. '
+              'Наявний офлайн-кеш не змінено: $error',
+        );
       }
     } finally {
       if (mounted) {

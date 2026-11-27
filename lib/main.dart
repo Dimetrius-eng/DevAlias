@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'data/unfinished_game_store.dart';
@@ -39,18 +41,41 @@ class DevAliasHomePage extends StatefulWidget {
   State<DevAliasHomePage> createState() => _DevAliasHomePageState();
 }
 
-class _DevAliasHomePageState extends State<DevAliasHomePage> {
+class _DevAliasHomePageState extends State<DevAliasHomePage>
+    with WidgetsBindingObserver {
   final _unfinishedGameStore = createUnfinishedGameStore();
   SavedGame? _savedGame;
+  Timer? _syncRetryTimer;
+  var _isSynchronizingDictionary = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSavedGame();
     _synchronizeDictionaryInBackground();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _syncRetryTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncRetryTimer?.cancel();
+      _syncRetryTimer = null;
+      _synchronizeDictionaryInBackground();
+    }
+  }
+
   Future<void> _synchronizeDictionaryInBackground() async {
+    if (_isSynchronizingDictionary) {
+      return;
+    }
     RemoteDictionaryApi? api;
     try {
       api = RemoteDictionaryApi.fromEnvironment();
@@ -60,6 +85,7 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
     if (api == null) {
       return;
     }
+    _isSynchronizingDictionary = true;
     try {
       await DictionarySyncService(
         remoteSource: api,
@@ -67,9 +93,21 @@ class _DevAliasHomePageState extends State<DevAliasHomePage> {
       ).synchronize();
     } on Object {
       // A missing server or network must never prevent the offline game.
+      _scheduleDictionaryRetry();
     } finally {
       api.close();
+      _isSynchronizingDictionary = false;
     }
+  }
+
+  void _scheduleDictionaryRetry() {
+    if (_syncRetryTimer != null || !mounted) {
+      return;
+    }
+    _syncRetryTimer = Timer(const Duration(seconds: 30), () {
+      _syncRetryTimer = null;
+      _synchronizeDictionaryInBackground();
+    });
   }
 
   Future<void> _loadSavedGame() async {
