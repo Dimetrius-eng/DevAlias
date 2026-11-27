@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../domain/game_settings.dart';
 import '../domain/game_word.dart';
 import 'asset_word_repository.dart';
@@ -10,6 +12,15 @@ class DictionarySyncResult {
   final int wordCount;
 }
 
+class DictionarySyncUnavailableException implements Exception {
+  const DictionarySyncUnavailableException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'Server sync is unavailable: $cause';
+}
+
 class DictionarySyncService {
   const DictionarySyncService({
     required this.remoteSource,
@@ -20,7 +31,16 @@ class DictionarySyncService {
   final DictionaryCache cache;
 
   Future<DictionarySyncResult> synchronize() async {
-    final words = await remoteSource.fetchDictionary();
+    final List<GameWord> words;
+    try {
+      words = await remoteSource.fetchDictionary().timeout(
+        const Duration(seconds: 10),
+      );
+    } on FormatException {
+      rethrow;
+    } on Object catch (error) {
+      throw DictionarySyncUnavailableException(error);
+    }
     if (words.isEmpty) {
       throw const FormatException('The server dictionary cannot be empty.');
     }

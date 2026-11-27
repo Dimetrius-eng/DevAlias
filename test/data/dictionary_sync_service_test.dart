@@ -51,6 +51,34 @@ void main() {
       expect(cache.words.single.id, 'old-word');
     },
   );
+
+  test(
+    'a network failure keeps the cache until the next successful retry',
+    () async {
+      final cache = _FakeCache()
+        ..words = const [
+          GameWord(
+            id: 'cached-word',
+            term: 'Кешоване слово',
+            difficulty: Difficulty.medium,
+            category: WordCategory.generalIt,
+          ),
+        ];
+      final source = _RetryingRemoteSource();
+      final service = DictionarySyncService(remoteSource: source, cache: cache);
+
+      await expectLater(
+        service.synchronize(),
+        throwsA(isA<DictionarySyncUnavailableException>()),
+      );
+      expect(cache.words.single.id, 'cached-word');
+
+      final result = await service.synchronize();
+
+      expect(result.wordCount, 1);
+      expect(cache.words.single.id, 'recovered-word');
+    },
+  );
 }
 
 class _FakeRemoteSource implements DictionaryRemoteSource {
@@ -85,5 +113,25 @@ class _FakeCache implements DictionaryCache {
   @override
   Future<void> replaceAll(List<GameWord> nextWords) async {
     words = List.unmodifiable(nextWords);
+  }
+}
+
+class _RetryingRemoteSource implements DictionaryRemoteSource {
+  var _attempt = 0;
+
+  @override
+  Future<List<GameWord>> fetchDictionary() async {
+    _attempt += 1;
+    if (_attempt == 1) {
+      throw StateError('No network connection');
+    }
+    return const [
+      GameWord(
+        id: 'recovered-word',
+        term: 'Відновлене слово',
+        difficulty: Difficulty.medium,
+        category: WordCategory.generalIt,
+      ),
+    ];
   }
 }
